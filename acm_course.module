@@ -1,0 +1,200 @@
+<?php
+/*
+ *
+ *  hook_menu()
+ */
+function acm_course_menu() {
+	$items = array();
+	$items['student/course_entity'] = array(
+		'title' => 'Course Entity',
+		'page callback' => 'acm_course_formget',
+		'access callback' => 'acm_course_access',
+		'type' => MENU_NORMAL_ITEM,
+	);
+	$items['student/course/list'] = array(
+		'title' => 'Course manage list',
+		'page callback' => 'course_list',
+		'page arguments' => array(2), 
+		'access callback' => 'acm_course_access',
+		'type' => MENU_NORMAL_ITEM,
+		'file' => 'includes/acm.course.view.list.inc',
+	);
+	$items['student/course/%/view'] = array(
+		'title' => 'Course manage list',
+		'page callback' => 'viewsdata',
+		'page arguments' => array(2),
+		'access callback' => 'acm_course_access',
+		'type' => MENU_NORMAL_ITEM,
+		'file' => 'includes/acm.course.view.list.inc',
+	);
+	return $items;
+}
+function acm_course_access() {
+	global $user;
+	if(in_array('administrator',$user->roles)||in_array('teacher', $user->roles)){		
+		return TRUE;
+	}
+	else{
+	return FALSE;
+	}
+}
+function acm_course_init() {
+	drupal_add_css(drupal_get_path('module', 'acm_course') . '/css/acm_course.css');
+	drupal_add_js(drupal_get_path('module', 'acm_course') . '/js/acm_course.js'); 
+
+}
+function acm_course_formget(){
+	return drupal_get_form('acm_course_form');
+}
+/*
+ *
+ * hook form()
+ */
+function acm_course_form($form_id) {
+	$student_lists=get_user_list('student');
+	$student_options = array();
+	$student_options[] = 'Select Student';
+	foreach($student_lists as $student_list){
+		$student_options[$student_list->uid] = $student_list->name;
+	}
+	$form['uid'] = array(
+		'#title' => t('Student'),
+		'#type' => 'select',
+		'#options' => $student_options,
+		'#required' => TRUE,
+		'#prefix' => '<div class="require-data">',
+		'#suffix' => '</div>' ,     
+	);
+	$course_lists = get_course_list('course_content');
+	$course_options = array();
+	$course_options[] = 'Select Course'; 
+	foreach($course_lists as $course_list){
+		$course_options[$course_list->nid] = $course_list->title;
+	}
+	$form['course'] = array(
+		'#title' => t('Course'),
+		'#type' => 'select',
+		'#options' => $course_options,
+		'#required' => TRUE,
+		'#prefix' => '<div class="require-data">',
+		'#suffix' => '</div>' ,     
+	);
+	$form['exam_score'] = array(
+		'#title' => t('Exam Score'),
+		'#type' => 'textfield', 
+		'#prefix' => '<div class="require-data">',
+		'#suffix' => '</div>',     
+	);
+	$form['test_score'] = array(
+		'#title' => t('Test Score'),
+		'#type' => 'textfield',
+		'#prefix' => '<div class="require-data">',
+		'#suffix' => '</div>' ,     
+	);
+	$form['matriculationnumber'] = array(
+		'#title' => t('Matriculation number'),
+		'#type' => 'textfield',
+		'#prefix' => '<div class="require-data">',
+		'#suffix' => '</div>',     
+	);
+	$form['currentgpa'] = array(
+		'#title' => t('Current GPA'),
+		'#type' => 'textfield',
+		'#prefix' => '<div class="require-data">',
+		'#suffix' => '</div>',     
+	);
+	$form['totalscore'] = array(
+		'#title' => t('Total Score'),
+		'#type' => 'textfield',
+		'#prefix' => '<div class="require-data">',
+		'#suffix' => '</div>',     
+	);
+	$form['grade'] = array(
+		'#title' => t('Grade'),
+		'#type' => 'textfield',
+		'#prefix' => '<div class="require-data">',
+		'#suffix' => '</div>',     
+	);
+	$form['gradepoint'] = array(
+		'#title' => t('Grade Point'),
+		'#type' => 'textfield',
+		'#prefix' => '<div class="require-data">',
+		'#suffix' => '</div>',     
+	);
+	$form['dropped'] = array(
+		'#title' => t('Dropped'),
+		'#type' => 'textfield',
+		'#prefix' => '<div class="require-data">',
+		'#suffix' => '</div>',     
+	);
+	$form['creditload'] = array(
+		'#title' => t('Credit Load'),
+		'#type' => 'textfield',
+		'#prefix' => '<div class="require-data">',
+		'#suffix' => '</div>',     
+	);
+	$form['approved'] = array(
+		'#title' => t('Approved'),
+		'#type' => 'textfield',
+		'#prefix' => '<div class="require-data">',
+		'#suffix' => '</div>',     
+	);
+	global $user;
+	$form['submittedby'] = array(
+		'#title' => t('Submitted by'),
+		'#type' => 'textfield',
+		'#default_value' => $user->name,
+		'#prefix' => '<div class="require-data">',
+		'#suffix' => '</div>',     
+	);
+	$form['submitted'] = array(
+		'#title' => t('Submitted for approval'),
+		'#type' => 'textfield',
+		'#prefix' => '<div class="require-data">',
+		'#suffix' => '</div>',     
+	);
+	$form['submit'] = array(
+		'#value' => 'Submit',
+		'#type' => 'submit',
+		'#submit' => array('acm_course_form_submit'),
+		'#prefix' => '<div class="member_submit" >',
+		'#suffix' => '</div>' ,
+	);
+	return $form;
+}
+
+function acm_course_form_validate($form, &$form_state){
+	if(empty($form_state['values']['uid'])){
+		form_set_error('uid',t('Please select student'));
+	}
+	if(empty($form_state['values']['course'])){
+		form_set_error('course',t('Please select course'));
+	}
+}
+function acm_course_form_submit($form, &$form_state){
+	$values = $form_state['values'];
+	drupal_write_record('acm_course', $values);
+	drupal_goto('admin/course/view');
+}
+//Get courses list
+function get_course_list($type, $limit=20, $offset=0) {
+	$nodes = array();
+	$query = db_rewrite_sql("SELECT nid FROM {node} n WHERE type = '%s'", 'n');
+	$results = db_query_range($query,$type,$offset,$limit);
+	while($nid = db_result($results)) {
+		$nodes[] = node_load($nid);
+	}
+	return $nodes;
+}
+//Get users list
+function get_user_list($role, $limit=20, $offset=0) {
+	$query = db_rewrite_sql("SELECT u.uid, u.name FROM users u,role r, users_roles ur WHERE r.name='%s' AND r.rid=ur.rid AND ur.uid=u.uid",'u');
+	$results= db_query_range($query,$role,$offset,$limit);
+	while ($result = db_fetch_object($results)) {
+		$users[]=$result;
+	}
+  return $users;
+}
+
+
+
