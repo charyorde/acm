@@ -1,0 +1,4 @@
+name = Course entity
+description = Course entity.
+package = Custom
+core = 6.x
