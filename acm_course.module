@@ -16,7 +16,7 @@ function acm_course_menu() {
 		'page callback' => 'course_list', 
 		'access callback' => 'acm_course_access',
 		'type' => MENU_NORMAL_ITEM,
-		'file' => 'includes/acm_course.view.list.inc',
+		'file' => 'acm_course.view.list.inc',
 	);
 	$items['student/course/%/view'] = array(
 		'title' => 'Course manage list',
@@ -24,7 +24,7 @@ function acm_course_menu() {
 		'page arguments' => array(2),
 		'access callback' => 'acm_course_access',
 		'type' => MENU_NORMAL_ITEM,
-		'file' => 'includes/acm_course.view.list.inc',
+		'file' => 'acm_course.view.list.inc',
 	);
 	return $items;
 }
