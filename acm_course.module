@@ -26,6 +26,13 @@ function acm_course_menu() {
 		'type' => MENU_NORMAL_ITEM,
 		'file' => 'acm_course.view.list.inc',
 	);
+	$items['student/course/update'] = array(
+		'title' => 'Course manage list',
+		'page callback' => 'acm_course_update',
+		'access arguments' => array('administer acm_course'),
+		'type' => MENU_NORMAL_ITEM,
+		'file' => 'includes/acm_course.view.list.inc'
+	);
 	return $items;
 }
 function acm_course_perm() {
@@ -116,7 +123,7 @@ function acm_course_form($form_id) {
 	);
 	$form['dropped'] = array(
 		'#title' => t('Dropped'),
-		'#type' => 'textfield',
+		'#type' => 'checkbox',
 		'#prefix' => '<div class="require-data">',
 		'#suffix' => '</div>',     
 	);
@@ -135,7 +142,7 @@ function acm_course_form($form_id) {
 	global $user;
 	$form['submittedby'] = array(
 		'#title' => t('Submitted by'),
-		'#type' => 'textfield',
+		'#type' => 'hidden',
 		'#default_value' => $user->name,
 		'#prefix' => '<div class="require-data">',
 		'#suffix' => '</div>',     
