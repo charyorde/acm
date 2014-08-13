@@ -8,13 +8,13 @@ function acm_course_menu() {
 	$items['student/course_entity'] = array(
 		'title' => 'Course Entity',
 		'page callback' => 'acm_course_formget',
-		'access callback' => 'acm_course_access',
+		'access arguments' => array('administer acm_course'),
 		'type' => MENU_NORMAL_ITEM,
 	);
 	$items['student/course/list'] = array(
 		'title' => 'Course manage list',
 		'page callback' => 'course_list', 
-		'access callback' => 'acm_course_access',
+		'access arguments' => array('administer acm_course'),
 		'type' => MENU_NORMAL_ITEM,
 		'file' => 'acm_course.view.list.inc',
 	);
@@ -22,20 +22,14 @@ function acm_course_menu() {
 		'title' => 'Course manage list',
 		'page callback' => 'viewsdata',
 		'page arguments' => array(2),
-		'access callback' => 'acm_course_access',
+		'access arguments' => array('administer acm_course'),
 		'type' => MENU_NORMAL_ITEM,
 		'file' => 'acm_course.view.list.inc',
 	);
 	return $items;
 }
-function acm_course_access() {
-	global $user;
-	if(in_array('administrator',$user->roles)||in_array('teacher', $user->roles)){		
-		return TRUE;
-	}
-	else{
-	return FALSE;
-	}
+function acm_course_perm() {
+	return array('administer acm_course');
 }
 function acm_course_init() {
 	drupal_add_css(drupal_get_path('module', 'acm_course') . '/css/acm_course.css');
