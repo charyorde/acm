@@ -190,7 +190,6 @@ function acm_course_form_submit($form, &$form_state){
     $node = node_load($nid);
     $node->uid = 1;
     node_save($node);
-    //drupal_set_message('Course created successfully.' . l(t('View course'), "course/$nid"));
 	  drupal_goto('student/course/list');
   } else {
     drupal_set_message("Something dangerous happened! Couldn't save new Course", 'error');
