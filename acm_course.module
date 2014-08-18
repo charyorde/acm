@@ -1,5 +1,5 @@
 <?php
-/*
+/**
  *
  *  hook_menu()
  */
@@ -16,31 +16,36 @@ function acm_course_menu() {
 		'page callback' => 'course_list', 
 		'access arguments' => array('administer acm_course'),
 		'type' => MENU_NORMAL_ITEM,
-		'file' => 'acm_course.view.list.inc',
+		'file' => 'includes/acm_course.view.list.inc',
 	);
 	$items['student/course/%/view'] = array(
-		'title' => 'Course manage list',
-		'page callback' => 'viewsdata',
+		'title' => 'Course entity view',
+		'page callback' => 'view_courselist',
 		'page arguments' => array(2),
 		'access arguments' => array('administer acm_course'),
-		'type' => MENU_NORMAL_ITEM,
-		'file' => 'acm_course.view.list.inc',
+		'type' => MENU_CALLBACK,
+		'file' => 'includes/acm_course.view.list.inc',
 	);
 	$items['student/course/update'] = array(
-		'title' => 'Course manage list',
+		'title' => 'Course entity update',
 		'page callback' => 'acm_course_update',
 		'access arguments' => array('administer acm_course'),
-		'type' => MENU_NORMAL_ITEM,
+		'type' => MENU_CALLBACK,
 		'file' => 'includes/acm_course.view.list.inc'
 	);
 	return $items;
 }
+/*
+*
+*hook perm
+*/
 function acm_course_perm() {
-	return array('administer acm_course');
+  return array('administer acm_course');
 }
+
 function acm_course_init() {
-	drupal_add_css(drupal_get_path('module', 'acm_course') . '/css/acm_course.css');
-	drupal_add_js(drupal_get_path('module', 'acm_course') . '/js/acm_course.js'); 
+	//drupal_add_css(drupal_get_path('module', 'acm_course') . '/css/acm_course.css');
+	//drupal_add_js(drupal_get_path('module', 'acm_course') . '/js/acm_course.js'); 
 
 }
 function acm_course_formget(){
@@ -51,33 +56,12 @@ function acm_course_formget(){
  * hook form()
  */
 function acm_course_form($form_id) {
-	$student_lists=get_user_list('student');
-	$student_options = array();
-	$student_options[] = 'Select Student';
-	foreach($student_lists as $student_list){
-		$student_options[$student_list->uid] = $student_list->name;
-	}
-	$form['uid'] = array(
-		'#title' => t('Student'),
-		'#type' => 'select',
-		'#options' => $student_options,
+	$form['title'] = array(
+		'#title' => t('Title'),
+		'#type' => 'textfield',
 		'#required' => TRUE,
 		'#prefix' => '<div class="require-data">',
-		'#suffix' => '</div>' ,     
-	);
-	$course_lists = get_course_list('course_content');
-	$course_options = array();
-	$course_options[] = 'Select Course'; 
-	foreach($course_lists as $course_list){
-		$course_options[$course_list->nid] = $course_list->title;
-	}
-	$form['course'] = array(
-		'#title' => t('Course'),
-		'#type' => 'select',
-		'#options' => $course_options,
-		'#required' => TRUE,
-		'#prefix' => '<div class="require-data">',
-		'#suffix' => '</div>' ,     
+		'#suffix' => '</div>',     
 	);
 	$form['exam_score'] = array(
 		'#title' => t('Exam Score'),
@@ -91,67 +75,113 @@ function acm_course_form($form_id) {
 		'#prefix' => '<div class="require-data">',
 		'#suffix' => '</div>' ,     
 	);
-	$form['matriculationnumber'] = array(
-		'#title' => t('Matriculation number'),
+	$form['academic_departmentid'] = array(
+		'#title' => t('Academic Department Id'),
 		'#type' => 'textfield',
 		'#prefix' => '<div class="require-data">',
 		'#suffix' => '</div>',     
 	);
-	$form['currentgpa'] = array(
-		'#title' => t('Current GPA'),
+	$form['code'] = array(
+		'#title' => t('Code'),
 		'#type' => 'textfield',
 		'#prefix' => '<div class="require-data">',
 		'#suffix' => '</div>',     
 	);
-	$form['totalscore'] = array(
-		'#title' => t('Total Score'),
+	$form['description'] = array(
+		'#title' => t('Description'),
+		'#type' => 'textarea',
+		'#prefix' => '<div class="require-data">',
+		'#suffix' => '</div>',     
+	);
+	$form['creditpoint'] = array(
+		'#title' => t('Credit Point'),
 		'#type' => 'textfield',
 		'#prefix' => '<div class="require-data">',
 		'#suffix' => '</div>',     
 	);
-	$form['grade'] = array(
-		'#title' => t('Grade'),
+	$form['prerequisitecodes'] = array(
+		'#title' => t('Prerequisite Codes'),
 		'#type' => 'textfield',
 		'#prefix' => '<div class="require-data">',
 		'#suffix' => '</div>',     
 	);
-	$form['gradepoint'] = array(
-		'#title' => t('Grade Point'),
+	$form['prerequisites'] = array(
+		'#title' => t('Prerequisite Course'),
 		'#type' => 'textfield',
 		'#prefix' => '<div class="require-data">',
 		'#suffix' => '</div>',     
 	);
-	$form['dropped'] = array(
-		'#title' => t('Dropped'),
-		'#type' => 'checkbox',
-		'#prefix' => '<div class="require-data">',
-		'#suffix' => '</div>',     
-	);
-	$form['creditload'] = array(
-		'#title' => t('Credit Load'),
+	$form['level'] = array(
+		'#title' => t('Level'),
 		'#type' => 'textfield',
 		'#prefix' => '<div class="require-data">',
 		'#suffix' => '</div>',     
 	);
-	$form['approved'] = array(
-		'#title' => t('Approved'),
-		'#type' => 'checkbox',
+	$form['semester'] = array(
+		'#title' => t('Semester'),
+		'#type' => 'textfield',
 		'#prefix' => '<div class="require-data">',
 		'#suffix' => '</div>',     
 	);
-	global $user;
-	$form['submittedby'] = array(
-		'#title' => t('Submitted by'),
+	$form['session'] = array(
+		'#title' => t('Session'),
+		'#type' => 'textfield',
+		'#prefix' => '<div class="require-data">',
+		'#suffix' => '</div>',     
+	);
+	$form['lecturerincharge'] = array(
+		'#title' => t('Lecturer in Charge'),
+		'#type' => 'textfield',
+		'#prefix' => '<div class="require-data">',
+		'#suffix' => '</div>',     
+	);
+	$form['numberofcas'] = array(
+		'#title' => t('Number of CAS'),
+		'#type' => 'textfield',
+		'#prefix' => '<div class="require-data">',
+		'#suffix' => '</div>',     
+	);
+	$form['caapprovalmethod'] = array(
+		'#title' => t('CA Approval Method'),
+		'#type' => 'textfield',
+		'#prefix' => '<div class="require-data">',
+		'#suffix' => '</div>',     
+	);
+	$form['maxtestmark'] = array(
+		'#title' => t('Max Test Mark'),
+		'#type' => 'textfield',
+		'#prefix' => '<div class="require-data">',
+		'#suffix' => '</div>',     
+	);
+	$form['maxexammark'] = array(
+		'#title' => t('Max Exam Mark'),
+		'#type' => 'textfield',
+		'#prefix' => '<div class="require-data">',
+		'#suffix' => '</div>',     
+	);
+	$form['programme'] = array(
+		'#title' => t('Programme'),
+		'#type' => 'textfield',
+		'#prefix' => '<div class="require-data">',
+		'#suffix' => '</div>',     
+	);
+	$options = array('Core'=>'Core','Elective'=>'Elective','Required'=>'Required');
+	$form['type'] = array(
+		'#title' => t('Type'),
+		'#type' => 'select',
+		'#options' => $options,
+		'#prefix' => '<div class="require-data">',
+		'#suffix' => '</div>',     
+	);
+	$form['created'] = array(
+		'#title' => t('Created'),
 		'#type' => 'hidden',
-		'#default_value' => $user->name,
-		'#prefix' => '<div class="require-data">',
-		'#suffix' => '</div>',     
+		'#default_value' => date("Y-m-d H:i:s"),
 	);
-	$form['submitted'] = array(
-		'#title' => t('Submitted for approval'),
-		'#type' => 'checkbox',
-		'#prefix' => '<div class="require-data">',
-		'#suffix' => '</div>',     
+	$form['updated'] = array(
+		'#title' => t('Updated'),
+		'#type' => 'hidden',
+		'#default_value' => date("Y-m-d H:i:s"),
 	);
 	$form['submit'] = array(
 		'#value' => 'Submit',
@@ -164,56 +194,37 @@ function acm_course_form($form_id) {
 }
 
 function acm_course_form_validate($form, &$form_state){
-	if(empty($form_state['values']['uid'])){
-		form_set_error('uid',t('Please select student'));
+	/*if(empty($form_state['values']['title'])){
+		form_set_error('Title',t('Title is mandatory'));
 	}
-	if(empty($form_state['values']['course'])){
-		form_set_error('course',t('Please select course'));
-	}
+	if(empty($form_state['values']['exam_score'])){
+		form_set_error('Test score',t('Title is mandatory'));
+	}*/
 }
 function acm_course_form_submit($form, &$form_state){
-  $values = $form_state['values'];
-  $course_table = 'acm_course';
-  $course_id = db_last_insert_id($course_table, 'id');
+	$values = $form_state['values'];
 	$success = drupal_write_record('acm_course',$values);
-  if($success) {
-    // TODO: Add new course_content node(s). Contents to add are Course Introduction, Course materials, course references
-    // Instead of below code, create Course Introduction, COurse Materials and Course references using drupal batch process. Invoke acm_school_create_batch_course_content here
-    module_load_include('inc', 'node', 'node.pages');
-    $node = array('type' => 'course_content');
-    $node_form_state = array();
-    $node_form_state['values']['title'] = t('Course Introduction');
-    $node_form_state['values']['field_course_ref_id'][0]['value'] = $course_id;
-    $node_form_state['values']['op'] = t('Save');
-    drupal_execute('course_content_node_form', $node_form_state, (object)$node);
-    $nid = $node_form_state['nid'];
-    $node = node_load($nid);
-    $node->uid = 1;
-    node_save($node);
-	  drupal_goto('student/course/list');
-  } else {
-    drupal_set_message("Something dangerous happened! Couldn't save new Course", 'error');
-  }
-}
-//Get courses list
-function get_course_list($type, $limit=20, $offset=0) {
-	$nodes = array();
-	$query = db_rewrite_sql("SELECT nid FROM {node} n WHERE type = '%s'", 'n');
-	$results = db_query_range($query,$type,$offset,$limit);
-	while($nid = db_result($results)) {
-		$nodes[] = node_load($nid);
+	$course_id = db_last_insert_id('acm_course', 'id');
+	if($success) {
+		// TODO: Add new course_content node(s). Contents to add are Course Introduction, Course materials, course references
+		// Instead of below code, create Course Introduction, COurse Materials and Course references using drupal batch process. Invoke acm_school_create_batch_course_content here
+		module_load_include('inc', 'node', 'node.pages');
+		$node = array('type' => 'course_content');
+		$node_form_state = array();
+		$node_form_state['values']['title'] = t('Course Introduction');
+		$node_form_state['values']['field_course_ref_id'][0]['value'] = $course_id;
+		$node_form_state['values']['op'] = t('Save');
+		drupal_execute('course_content_node_form', $node_form_state, (object)$node);
+		$nid = $node_form_state['nid'];
+		$node = node_load($nid);
+		$node->uid = 1;
+		node_save($node);
+		drupal_goto('student/course/list');
 	}
-	return $nodes;
-}
-//Get users list
-function get_user_list($role, $limit=20, $offset=0) {
-	$query = db_rewrite_sql("SELECT u.uid, u.name FROM users u,role r, users_roles ur WHERE r.name='%s' AND r.rid=ur.rid AND ur.uid=u.uid",'u');
-	$results= db_query_range($query,$role,$offset,$limit);
-	while ($result = db_fetch_object($results)) {
-		$users[]=$result;
+	else {
+		drupal_set_message("Something dangerous happened! Couldn't save new Course", 'error');
 	}
-  return $users;
-}
 
+}
 
 
