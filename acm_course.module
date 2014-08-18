@@ -204,27 +204,49 @@ function acm_course_form_validate($form, &$form_state){
 function acm_course_form_submit($form, &$form_state){
 	$values = $form_state['values'];
 	$success = drupal_write_record('acm_course',$values);
-	$course_id = db_last_insert_id('acm_course', 'id');
-	if($success) {
-		// TODO: Add new course_content node(s). Contents to add are Course Introduction, Course materials, course references
-		// Instead of below code, create Course Introduction, COurse Materials and Course references using drupal batch process. Invoke acm_school_create_batch_course_content here
-		module_load_include('inc', 'node', 'node.pages');
-		$node = array('type' => 'course_content');
-		$node_form_state = array();
-		$node_form_state['values']['title'] = t('Course Introduction');
-		$node_form_state['values']['field_course_ref_id'][0]['value'] = $course_id;
-		$node_form_state['values']['op'] = t('Save');
-		drupal_execute('course_content_node_form', $node_form_state, (object)$node);
-		$nid = $node_form_state['nid'];
-		$node = node_load($nid);
-		$node->uid = 1;
-		node_save($node);
-		drupal_goto('student/course/list');
+	$batch = array(
+		'title' => t('Adding Course Contents'), 
+		'operations' => array(), 
+		'finished' => '_acm_school_create_batch_course_content_finish', // Last function to call.
+		'init_message' => t('Initializing...'),
+		'progress_message' => t('Fixed @current out of @total.'),
+		'error_message' => t('Adding Course Contents encountered an error.'),
+	);
+	$batch['operations'][] = array('_acm_school_create_batch_course_content', array());
+	batch_set($batch);
+}
+function _acm_school_create_batch_course_content(&$context) {
+
+	$results = db_fetch_object(db_query("SELECT MAX(id) as id FROM {acm_course}"));
+	module_load_include('inc', 'node', 'node.pages');
+	$node = array('type' => 'course_content');
+	$node_form_state = array();
+	$node_form_state['values']['title'] = t('Course Introduction');
+	$node_form_state['values']['field_course_ref_id'][0]['value'] = $results->id;
+	$node_form_state['values']['op'] = t('Save');
+	drupal_execute('course_content_node_form', $node_form_state, (object)$node);
+	$nid = $node_form_state['nid'];
+	$node = node_load($nid);
+	$node->uid = 1;
+	node_save($node);
+
+	if ($count->count > 0) {
+		$context['finished'] = 0;
 	}
 	else {
-		drupal_set_message("Something dangerous happened! Couldn't save new Course", 'error');
+		$context['finished'] = 1;
 	}
+}
 
+function _acm_school_create_batch_course_content_finish($success, $results, $operations) {
+  if ($success) {
+   	drupal_goto('student/course/list');
+	$message = t('Course content has been created.');
+  }
+  else {
+    $message = t('Finished with error.');
+  }
+  drupal_set_message($message);
 }
 
 
