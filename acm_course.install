@@ -78,6 +78,13 @@ function acm_course_schema() {
 					'not null' => FALSE,
 					'default' => '',
 				),
+				'prerequisites' => array(
+					'type' => 'varchar',
+					'description' => 'Prerequisites course',
+					'length' => '100',
+					'not null' => FALSE,
+					'default' => '',
+				),
 				'level' => array(
 					'type' => 'varchar',
 					'description' => 'Course level',
@@ -99,7 +106,7 @@ function acm_course_schema() {
 					'not null' => FALSE,
 					'default' => '',
 				),
-				'lectureincharge' => array(
+				'lecturerincharge' => array(
 					'type' => 'varchar',
 					'description' => 'Course assigned to a lecture',
 					'length' => '40',
@@ -148,7 +155,6 @@ function acm_course_schema() {
 					'not null' => FALSE,
 					'default' => '',
 				),
-				
 				'created' => array(
 					'type' => 'varchar',
 					'description' => 'Created date',
