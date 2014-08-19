@@ -230,7 +230,6 @@ function _acm_school_create_batch_course_content(&$context) {
 	$node->uid = 1;
 	node_save($node);
 	
-	module_load_include('inc', 'node', 'node.pages');
 	$node = array('type' => 'course_content');
 	$node_form_state = array();
 	$node_form_state['values']['title'] = t('Course Materials');
@@ -242,7 +241,6 @@ function _acm_school_create_batch_course_content(&$context) {
 	$node->uid = 1;
 	node_save($node);
 	
-	module_load_include('inc', 'node', 'node.pages');
 	$node = array('type' => 'course_content');
 	$node_form_state = array();
 	$node_form_state['values']['title'] = t('Course Reference');
