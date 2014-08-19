@@ -254,12 +254,8 @@ function _acm_school_create_batch_course_content(&$context) {
 	$node->uid = 1;
 	node_save($node);
 	
-	if ($count->count > 0) {
-		$context['finished'] = 0;
-	}
-	else {
-		$context['finished'] = 1;
-	}
+	$context['finished'] = 1;
+
 }
 
 function _acm_school_create_batch_course_content_finish($success, $results, $operations) {
