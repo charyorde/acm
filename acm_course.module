@@ -229,7 +229,31 @@ function _acm_school_create_batch_course_content(&$context) {
 	$node = node_load($nid);
 	$node->uid = 1;
 	node_save($node);
-
+	
+	module_load_include('inc', 'node', 'node.pages');
+	$node = array('type' => 'course_content');
+	$node_form_state = array();
+	$node_form_state['values']['title'] = t('Course Materials');
+	$node_form_state['values']['field_course_ref_id'][0]['value'] = $results->id;
+	$node_form_state['values']['op'] = t('Save');
+	drupal_execute('course_content_node_form', $node_form_state, (object)$node);
+	$nid = $node_form_state['nid'];
+	$node = node_load($nid);
+	$node->uid = 1;
+	node_save($node);
+	
+	module_load_include('inc', 'node', 'node.pages');
+	$node = array('type' => 'course_content');
+	$node_form_state = array();
+	$node_form_state['values']['title'] = t('Course Reference');
+	$node_form_state['values']['field_course_ref_id'][0]['value'] = $results->id;
+	$node_form_state['values']['op'] = t('Save');
+	drupal_execute('course_content_node_form', $node_form_state, (object)$node);
+	$nid = $node_form_state['nid'];
+	$node = node_load($nid);
+	$node->uid = 1;
+	node_save($node);
+	
 	if ($count->count > 0) {
 		$context['finished'] = 0;
 	}
