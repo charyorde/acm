@@ -1,0 +1,256 @@
+<?php
+/**
+ * Implementation of hook_field_formatter_info().
+ * Here we define an option named as Thumbnail Image that will display in formatter list.
+ */
+define('THUMBNAIL_FORMATTER_DEFAULT_WRAPPER','span');
+define('THUMBNAIL_FORMATTER_DEFAULT_SIZE','1024x1024');
+define('THUMBNAIL_FORMATTER_DEFAULT_FILENAMES_MACHINE',1);
+define('THUMBNAIL_FORMATTER_DEFAULT_QUALITY',75);
+define('THUMBNAIL_FORMATTER_FILENAMES_HUMAN',0);
+
+function thumbnail_formatter_field_formatter_info() {
+ $formatters = array();
+  $formatters['thumb_format'] = array(
+      'label' => t('Thumbnail Image'),
+      'field types' => array('filefield'),
+      'description' => t('Displays video and pdf files as thumbnail image.'),
+	    'multiple values' => CONTENT_HANDLE_CORE,
+  );
+  if(module_exists('imagecache')){
+  	foreach(imagecache_presets() as $preset){
+  		$formatters[$preset['presetname'] . '][thumbnail_formatter'] = array(
+  		'label' => t('Thumbnail Image:@preset image',array('@preset' => $preset['presetname'])),
+  		'field types' => array('filefield'),
+  		'description' => t('Display a thumbnail using imagecache preset @preset', array('@preset' => $preset['presetname'])),
+  	  );
+	  }
+  } 
+  return $formatters;
+}
+/* 
+* Implements hook_theme 
+*/
+function thumbnail_formatter_theme(){
+	$theme = array(
+		'thumbnail_formatter_formatter_thumb_format' => array(
+			'function' => 'theme_thumbnail_formatter_formatter_thumb',
+			'arguments' => array('element' => NULL),
+		),
+	);
+	if(module_exists('imagecache')){
+		foreach(imagecache_presets() as $preset){
+		$theme['thumbnail_formatter_formatter_'. $preset['presetname'] . '][thumbnail_formatter'] = array( 'function' => 'theme_thumbnail_formatter_formatter_thumb',
+				'arguments' => array('element' => NULL),
+				);
+		}
+	}
+	return $theme;
+}
+/* 
+* Implements theme_
+*/
+function theme_thumbnail_formatter_formatter_thumb($element){
+	$output = '';
+  $item = $element['#item'];
+	if($item['filemime'] == 'application/pdf'){
+		$output_filename = _thumbnail_create_preview($item); //return thumbnail image path
+		global $base_url;
+		$output_filename_pdf = $base_url.'/'.$output_filename;
+		$output = "<img src=\"$output_filename\" title=\"{$item['filemime']}\" />";
+		//imagecache preset o/p
+		if (list($namespace, $presetname) = explode('][', $element['#formatter'], 2)) {
+			if ($preset = imagecache_preset_by_name($namespace)) {
+				$output = theme('imagecache', $namespace, $output_filename, $item['filename'], $item['filename']);
+			}
+		}
+		$tag = variable_get('thumbnail_formatter_wrapper','span');
+		return "<div class=\"thumbnail\" id=\" thumbnail-{$item['fid']}\">
+		<$tag class=\"image-wrapper\"><a href=\"/{$item['filepath']} \">$output</a></$tag> </div>";
+	}
+	
+	elseif($item['filemime'] == 'video/x-ms-wmv' or $item['filemime'] == "video/x-flv" or $item['filemime'] == "video/mpeg" or $item['filemime'] == "video/quicktime" or $item['filemime'] == "video/mp4"){
+		$output = ''; 
+		global $base_url;
+		$filepath = $base_url.'/'.$element['#item']['filepath'];
+		$thumbpath = $base_url.'/'.file_directory_path().'/default.PNG';
+		$output_filename = file_directory_path().'/default.PNG';
+		//imagecache preset o/p
+		if (list($namespace, $presetname) = explode('][', $element['#formatter'], 2)) {
+			if ($preset = imagecache_preset_by_name($namespace)) {
+				$output = theme('imagecache', $namespace, $output_filename, $item['filename'], $item['filename']);
+			  return $output;
+			}
+		}      
+		if(!empty($element['#item']['nid']) && (is_numeric($element['#item']['nid']))){
+			$output = "<div style='float:left;width: 120px;'><a href='$filepath'><img src='$thumbpath'/></a></div>";
+		}
+		return $output;
+	}
+	
+	else{
+		return '';
+	}
+	 
+}
+/*
+*Implements hook_menu();
+*/
+function thumbnail_formatter_menu(){
+	$items = array(
+		'admin/settings/thumbnailview' => array(
+			'title' => 'Configure thumbnail format image',
+			'description' => 'Configure thumbnail format setting',
+			'page callback' => 'drupal_get_form',
+			'access arguments' => array('administer content'),
+			'page arguments' => array('thumbnail_formatter_admin_settings'),
+			'type'=> MENU_NORMAL_ITEM,
+		),
+	);
+	return $items;
+}
+
+function thumbnail_formatter_admin_settings(){
+	$form = array(
+		'thumbnail_formatter_pathtoimages' => array(
+			'#type' => 'textfield',
+			'#title' => t('Thumbnail Image folder'),
+			'#description' => t('Path inside the file directory,where the thumbnail image stored, For example <b>thumbnailimage</b>'),
+			'#default_value' => variable_get('thumbnail_formatter_pathtoimages','thumbnailformatter'),
+		),
+		'thumbnail_formatter_previewsize' => array(
+			'#type' => 'textfield',
+			'#title' => t('Thumbnail Image Size'),
+			'#description' => t('Size of the preview in pixels. For example <em>100x100</em>'),
+			'#default_value' => variable_get('thumbnail_formatter_previewsize',THUMBNAIL_FORMATTER_DEFAULT_SIZE),
+		),
+		'thumbnail_formatter_quality' => array(
+			'#type' => 'textfield',
+			'#title' => 'Thumbnail Quality',
+			'#size' => 3,
+			'#maxlength' => 3,
+			'#field_suffix' =>'%',
+			'#description' => t('Image extraction quality in percentage'),
+			'#default_value' => variable_get('thumbnail_formatter_quality',THUMBNAIL_FORMATTER_DEFAULT_QUALITY),
+		),
+		'thumbnail_formatter_wrapper' => array(
+			'#type' => 'radios',
+			'#title' => t('Thumbnail Wrapper'),
+			'#description' => t('Select which type of wrapper used for theme element'),
+			'#options' => array('span'=>'span','div'=>'div'),
+			'#default_value' => variable_get('thumbnail_formatter_wrapper', THUMBNAIL_FORMATTER_DEFAULT_WRAPPER),
+		),
+		'thumbnail_formatter_filenames' => array(
+			'#type' => 'radios',
+			'#title' => t('Generated file name'),
+			'#description' => t('If you have change this after some file added, you need to delete them manually'),
+			'#options' => array(THUMBNAIL_FORMATTER_FILENAMES_MACHINE => t('filename hash'), THUMBNAIL_FORMATTER_FILENAMES_HUMAN => t('pdf filename')),
+			'#default_value' => variable_get('thumbnail_formatter_filenames', THUMBNAIL_FORMATTER_FILENAMES_MACHINE),		
+		),
+		
+	);
+		return system_settings_form($form);	
+}
+/*
+* Implements hook_file_delete()
+*/
+
+function thumbnail_formatter_file_delete($file){
+	file_delete(_thumbnail_output_filename($file));
+}
+
+/*
+* Implements hook_form_validate()
+*/
+
+function thumbnail_formatter_admin_settings_validate(&$form,&$form_state){
+	if(!_thumbnail_formatter_prepare_filesystem(file_directory_path().'/'. $form_state['values']['thumbnail_formatter_pathtoimages'])){
+		form_set_error('thumbnail_formatter_pathtoimages',t('Invalid path @path',array('@path'=>'thumbnail_formatter_pathtoimages')));
+	}
+}
+/*
+* Create new directory for thumbnail image
+*/
+function _thumbnail_formatter_prepare_filesystem($output_dir){
+	$output_dir = _thumbnail_realpath($output_dir);
+	if(!file_exists($output_dir)){
+		if(!mkdir($output_dir)){
+			drupal_set_message(t('Error creating directory %dir', array('%dir' => $output_dir)), 'error');
+			watchdog('thumbnail_formatter','Error creating directory %dir', array('%dir' => $output_dir),WATCHDOG_ERROR);
+			return FALSE;
+		}
+		$message = t('The directory %dir has been created', array('%dir' => $output_dir));
+		watchdog('thumbnail_formatter','This directory %dir has been created',array('%dir'=>$output_format),WATCHDOG_ERROR);
+		drupal_set_message($message,'status');
+		return TRUE;	
+	}
+	elseif(!is_dir($output_dir)){
+		$message = t('The path %dir is not a directory', array('%dir'=>$output_dir));
+		watchdog('thumbnail_formatter','The path %dir is not a directory', array('%dir' => $output_dir),WATCHDOG_ERROR);
+		drupal_set_message($message,'error');
+		return FALSE;
+	}
+	return TRUE;
+
+}
+
+
+/*
+* @Return newly created thumbnail image URI path
+*/
+function _thumbnail_create_preview($file){
+	if(!is_array($file)){
+  	$file = (array) $file;
+	}
+	$output_filename = _thumbnail_output_filename($file);
+	if(!file_exists($output_filename) && function_exists('_imageapi_imagemagick_convert_exec')){
+		_thumbnail_convert_image($file['filepath'],$output_filename);
+	}
+	return $output_filename;
+}
+
+/*
+* @Return created filename
+*/
+function _thumbnail_output_filename($file){
+	if(!is_object($file)){
+		$file = (object) $file;
+	}
+	$output_dir = file_directory_path().'/'.variable_get('thumbnail_formatter_pathtoimages', 'thumbnail_formatter');
+	if(variable_get('thumbnail_formatter_filenames',THUMBNAIL_FORMATTER_FILENAMES_MACHINE)== THUMBNAIL_FORMATTER_FILENAMES_HUMAN)
+	{
+		$filename = basename($file->filename,'.pdf');
+		if(module_exists('transliteration')){
+		$filename = transliteration_clean_filename($filename);
+	}
+		return $output_dir.'/'.$file->fid. '-' . $filename .'.jpg';
+	}
+	else{
+		return $output_dir.'/'.md5($file->fid).'.jpg';
+	}
+}
+ /*
+ * Create thumbnail image using _imageapi_imagemagick_convert_exec()
+ */
+ 
+function _thumbnail_convert_image($source, $dest, $args = array()){
+	$source = _thumbnail_realpath($source). '[0]';
+	$dest = _thumbnail_realpath($dest);
+  $args['quality'] = '-quality ' . escapeshellarg(variable_get('imagemagick_quality', THUMBNAIL_FORMATTER_DEFAULT_QUALITY));
+	$args['previewsize'] = '-resize ' . escapeshellarg(variable_get('thumbnail_formatter_previewsize', THUMBNAIL_FORMATTER_DEFAULT_SIZE));
+	$context = array(
+		'source' => $source,
+		'destination' => $dest,
+	);
+	drupal_alter('imagemagick_arguments', $args , $context);
+	$command = escapeshellarg($source) . ' '. implode(' ', $args).' '. escapeshellarg($dest);
+	if(_imageapi_imagemagick_convert_exec($command, $output, $error) !== TRUE)
+	{
+		return FALSE;
+	}	
+		return file_exists($dest);
+}
+
+function _thumbnail_realpath($path){
+return $_SERVER['DOCUMENT_ROOT'].base_path().$path;
+}
