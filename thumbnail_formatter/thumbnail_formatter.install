@@ -1,0 +1,12 @@
+<?php 
+/*
+* Install, Update and Uninstall function Thumbnail_formatter module
+*/
+function thumbnail_formatter_uninstall(){
+	variable_del('thumbnail_formatter_pathtoimages');
+	variable_del('thumbnail_formatter_wrapper');
+	variable_del('thumbnail_formatter_filenames');
+	variable_del('thumbnail_formatter_quality');
+	variable_del('thumbnail_formatter_previewsize');
+	drupal_set_message(t("This @module has been uninstalled.",array("@module" => "Thumbnail Formatter")));
+}
