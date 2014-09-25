@@ -1,0 +1,105 @@
+.black_overlay{
+	display: none;
+	position: absolute;
+	top: 0%;
+	left: 0%;
+	width: 100%;
+	height: 100%;
+	background-color: #D5C9C9;
+	z-index:1001;
+	-moz-opacity: 0.8;
+	opacity:.80;
+	filter: alpha(opacity=80);
+}
+.popup_content {
+	display: none;
+	position: absolute;
+	width: 84%;
+	height: 66%;
+	top: 14%;
+	left: 3%;
+	padding: 16px;
+	border: 16px solid orange;
+	background-color: white;
+	z-index:1002;
+	overflow: auto;
+}
+.course_uploadlink{
+	float:right;
+}
+.course_uploadlink a{
+	background: none repeat scroll 0% 0% rgba(62, 58, 58, 1);
+	padding: 6px;
+	border-radius: 5px;
+	color:white;
+}
+.upload_wrapper_close{
+  float:right;
+}
+.upload_wrapper{
+  width:60%;
+  float:left;
+}
+.uploadArea{
+  min-height:300px;
+  height:auto; 
+  border:1px dotted #ccc; 
+  padding:10px;
+  cursor:move;
+  margin-bottom:10px; 
+  position:relative;
+}
+h1, h5{
+  padding:0px; margin:0px;
+  }
+h1.title{
+  font-family:'Boogaloo', 
+  cursive; padding:10px;
+  }
+.uploadArea h1{
+  color:#ccc;
+  width:100%;
+  z-index:0; 
+  text-align:center; 
+  vertical-align:middle;
+  position:absolute;
+  top:25px;
+  }
+.dfiles{ 
+  clear:both;
+  border:1px solid #ccc;
+  background-color:#E4E4E4;
+  padding:3px;
+  position:relative;
+  height:25px;
+  margin:3px;
+  z-index:1; 
+  width:97%; 
+  opacity:0.6;
+  cursor:default;
+  }
+h5{
+  width:95%;
+  line-height:25px;
+  }
+h5, h5 img {
+  float:left;
+  }
+.invalid { 
+  border:1px solid red !important;
+  }
+.buttonUpload { 
+  display:inline-block; 
+  padding: 4px 10px 4px; 
+  text-align: center;
+  text-shadow: 0 -1px 0 rgba(0, 0, 0, 0.25); 
+  background-color: #0074cc;
+  -webkit-border-radius: 4px;
+  -moz-border-radius: 4px;
+  border-radius: 4px; 
+  border-color: #e6e6e6 #e6e6e6 #bfbfbf; 
+  border: 1px solid #cccccc; color:#fff;
+  }
+.progress img{
+  margin-top:7px; margin-left:24px;
+  }
