@@ -1,0 +1,63 @@
+<?php
+/**
+ *
+ *  hook_menu()
+ */
+function upload_course_menu() {
+	$items = array();
+	$items['node/%/upload'] = array(
+		'title' => 'Course Upload',
+		'page callback' => 'upload_course_materials',
+		'page arguments' => array(1),
+		'access arguments' => array('administer upload_course'),
+		'type' => MENU_CALLBACK,	
+	);
+	return $items;
+}
+/*
+*
+*hook perm
+*/
+function upload_course_perm() {
+  return array('administer upload_course');
+}
+
+function upload_course_materials($nid){
+	if($_SERVER['REQUEST_METHOD'] == "POST"){
+		if(isset($_FILES['file']) && $_FILES['file']['error'] == 0){
+		$targetfolder =   file_directory_path().'/temp/' ;
+		// Get the path to your Drupal site's files directory 
+		$dest = file_directory_path();
+		$targetfolder = $targetfolder . basename( $_FILES['file']['name']) ;
+		move_uploaded_file($_FILES['file']['tmp_name'], $targetfolder);
+			$file = $targetfolder ;
+			if(!file_copy($file,$dest)) {
+                //echo "Failed to move file: $file\n";
+                continue;
+            } else {
+                // file_move might change the name of the file
+                $name = basename($file);
+            }
+			$node = node_load($nid);
+			$file_obj = new stdClass();
+			$file_obj->filename = $_FILES['file']['name'];
+			//$file_obj->filename = $name;
+            $file_obj->filepath = $file;
+            $file_obj->filemime =  file_get_mimetype($_FILES['file']['name']);
+            $file_obj->filesize = $filesize;
+			$file_obj->filemime =  file_get_mimetype($_FILES['file']['name']);
+			$file_obj->filesize = $_FILES['file']['size'];
+			$file_obj->uid = 1;
+			$file_obj->status = FILE_STATUS_TEMPORARY;
+			$file_obj->timestamp = time();
+			$file_obj->list = 1;
+			$file_obj->new = true;
+			drupal_write_record('files', $file_obj);
+			file_set_status($file_obj,1);
+			$node->field_course_materials[] = (array)$file_obj;
+			node_save($node);
+		}
+	echo($_POST['index']);
+	}
+exit;
+}
