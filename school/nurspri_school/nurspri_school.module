@@ -1,0 +1,80 @@
+<?php 
+/*
+ * Render student application profile items 
+ * hook_acm_student_application()
+ */
+function nurspri_school_acm_student_application(){
+
+}
+/*
+ * hook represents a label of items that should be configured for student application
+ * profile view
+ * hook_acm_student_application_items()
+ */
+function nurspri_school_acm_student_application_items(){
+
+}
+/*
+ * Defines the next step after admission application
+ * hook_admission_application_info()
+ */
+function nurspri_school_admission_application_info(){
+
+}
+/*
+ * This hook defines the setting for school admission 
+ * hook_admission_settings($type)
+ */
+function nurspri_school_admission_settings($type){
+
+}
+/*
+ * setting for structure of each Academic module
+ * hook_school_settings()
+ */
+function nurspri_school_school_settings(){
+
+}
+/*
+ * view of student application made into a school
+ * hook_admission_application_list()
+ */
+function nurspri_school_admission_application_list(){
+
+}
+/*
+ * Describe the academic level of a school
+ * hook_academic_level()
+ */
+function nurspri_school_academic_level(){
+
+
+}
+/*
+ * Display all student grade in a school
+ * hook_grade()
+ */
+function nurspri_school_grade(){
+
+}
+/*
+ * Configure all the grade settings for a school
+ * hook_grade_settings()
+ */
+function nurspri_school_grade_settings(){
+
+}
+/*
+ * Configured all the score settings for a school
+ * hook_score_settings()
+ */
+function nurspri_school_score_settings(){
+
+}
+/*
+ * Display fee catalog of a school
+ * hook_fees_catalog()
+ */
+function nurspri_school_fees_catalog(){
+
+}
