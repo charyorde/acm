@@ -1,7 +1,7 @@
 <?php
 /**
  * @file
- * This file contains no working PHP code; it exists to provide additional documentation for oxygen as well as to document hooks in the standard Drupal manner.
+ * This file contains no working PHP code; it exists to provide additional documentation for doxygen as well as to document hooks in the standard Drupal manner.
  */
 
 /**
@@ -389,6 +389,51 @@ function hook_fees_type() {
  */
 function hook_fee_catalog_info() {
 
+}
+
+/**
+ * This hook defines roles in Acadaman.
+ *
+ * Best place to implement this hook is in a module's install file.
+ */ 
+function hook_acm_roles() {
+  // Example: Available default roles for all school types
+  return array('Applicant', 'Student', 'Bursar', 'Supervisor', 'Cleaner', 'Student parent', 'Staff');
+}
+
+/**
+ * This hook assigns permissions to roles.
+ *
+ * The recommended place to implement this hook is in a module's install file.
+ */ 
+function hook_acm_roles_perm() {
+  // Example shows Staff role being assigned 'administer school settings' 
+  // permission
+  return array(
+    'Staff' => 'administer school settings',
+  );
+}
+
+/**
+ * This hook defines the extra setup tasks to be performed after successful install
+ * of Acadaman for a new school.
+ */ 
+function hook_setup_tasks() {
+
+  // Example setup tasks for a University school type.
+  if($_GET['step'] == 'setup') {
+    $step = 'add-faculty';
+    $output = drupal_get_form('uni_school_setup_faculty_form');
+    variable_set('setup_step', 'faculty');
+  }
+  
+  if($_GET['step'] == 'course'){
+    $step = 'add-course';
+    $output = drupal_get_form('uni_school_setup_course_form');
+    variable_set('setup_step', 'course');
+  }
+  
+  return $output;
 }
 
 /**
