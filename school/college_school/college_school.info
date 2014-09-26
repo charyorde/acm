@@ -1,0 +1,5 @@
+name = College
+description = College
+package = school
+core = "6.x"
+version = "6.x-1.1"
