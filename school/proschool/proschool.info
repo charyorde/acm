@@ -1,0 +1,5 @@
+name = Proschool
+description = Proschool
+package = School
+core = "6.x"
+version = "6.x-1.1"
