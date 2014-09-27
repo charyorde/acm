@@ -51,7 +51,7 @@ function _get_roles_by_name() {
 function _get_roles_by_id () {
     $names = _get_roles_by_name();
     array_unshift ($names, 'SELECT rid FROM {role} WHERE name = \'%s\'' . str_repeat (' || name = \'%s\'', count ($names) - 1));
-    // retrieve roles from system
+    // retrive roles from system
     $result = call_user_func_array ('db_query', $names);
     $role = array ();
     while ($row = db_fetch_array ($result)) {
