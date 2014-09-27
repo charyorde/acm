@@ -49,15 +49,15 @@ function _get_roles_by_name() {
   );
 }
 function _get_roles_by_id () {
-    $names = _get_roles_by_name();
-    array_unshift ($names, 'SELECT rid FROM {role} WHERE name = \'%s\'' . str_repeat (' || name = \'%s\'', count ($names) - 1));
-    // retrive roles from system
-    $result = call_user_func_array ('db_query', $names);
-    $role = array ();
-    while ($row = db_fetch_array ($result)) {
-      $role[] = $row ['rid'];
-    }
-    return $role;
+  $names = _get_roles_by_name();
+  array_unshift ($names, 'SELECT rid FROM {role} WHERE name = \'%s\'' . str_repeat (' || name = \'%s\'', count ($names) - 1));
+  // retrive roles from system
+  $result = call_user_func_array ('db_query', $names);
+  $role = array ();
+  while ($row = db_fetch_array ($result)) {
+    $role[] = $row ['rid'];
+  }
+  return $role;
 }
 function _set_perm($rid, $permission) {
   $result = db_result(db_query("SELECT perm FROM {permission} WHERE rid = %d", $rid));
@@ -69,10 +69,10 @@ function _set_perm($rid, $permission) {
   $permno = count($permission);
   
   if($permno > 0){
-	  foreach($permission as $perm){
-	  $permissions[$perm] = true;
-	  }
-	}
+		foreach($permission as $perm){
+		 	$permissions[$perm] = true;
+		}
+  }
   db_query("DELETE FROM {permission} WHERE rid = %d", $rid);
   db_query(
     "INSERT INTO {permission} (rid, perm) VALUES (%d, '%s')",
