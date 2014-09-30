@@ -193,7 +193,7 @@ function uni_school_admission_health_form($form_id){
 	);	
 	$form['submit'] = array(
 		'#type' => 'submit',
-		'#value' => t('Next'),
+		'#value' => t('Submit'),
 		'#submit' => array('uni_school_admission_health_form_submit'),
 	);
 	return $form;
