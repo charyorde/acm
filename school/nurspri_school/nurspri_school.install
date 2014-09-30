@@ -3,13 +3,267 @@
 * Implementation of hook_install().
 */
 function nurspri_school_install(){
-  
+  drupal_install_schema('nurspri_school');
 }
 /**
 * Implementation of hook_uninstall().
 */
 function nurspri_school_uninstall(){
-  
+  drupal_uninstall_schema('nurspri_school');
+}
+/**
+* Implements of hook_schema()
+*/
+function nurspri_school_schema(){
+	$schema['student_application'] = array(
+		'description' => t('student application form'),
+		'fields' => array(
+			'id' => array(
+				'type' => 'serial',
+				'unsigned' => TRUE,
+				'not null' => TRUE,
+			),
+			'profileid' => array(
+				'type' => 'int',
+				'description' => 'Userid',
+				'unsigned' => TRUE,
+				'not null' => FALSE,
+			),
+			'examination_resultid' => array(
+				'type' => 'int',
+				'unsigned' => TRUE,
+				'not null' => FALSE,
+			),
+			'health_infoid' => array(
+				'type' => 'int',
+				'unsigned' => TRUE,
+				'not null' => FALSE,
+			),
+			'next_of_kin_infoid' => array(
+				'type' => 'int',
+				'unsigned' => TRUE,
+				'not null' => FALSE,
+			),
+			'sponsors_infoid' => array(
+				'type' => 'int',
+				'unsigned' => TRUE,
+				'not null' => FALSE,
+			),
+			'islocked' => array(
+				'type' => 'varchar',
+				'length' => 10,
+				'default'=>'',
+				'not null' => FALSE,
+			),
+			'profileemail' => array(
+				'type' => 'varchar',
+				'length' => 255,
+				'default' => '',
+				'not null' => FALSE,
+			),	
+			'status' => array(
+				'type' => 'varchar',
+				'length' => 20,
+				'default' => '',
+				'not null' => FALSE,
+			),
+		),
+		'indexes' => array(
+			'examination_resultid' => array('examination_resultid'),
+			'health_infoid' => array('health_infoid'),
+			'next_of_kin_infoid' => array('next_of_kin_infoid'),			
+			'sponsors_infoid' => array('sponsors_infoid'),
+		),
+		'primary key' => array('id'),
+		
+	);
+	
+	$schema['examination_result'] = array(
+		'description' => t('Examination result'),
+		'fields' => array(
+			'id' => array(
+				'type' => 'serial',
+				'unsigned' => TRUE,
+				'not null' => TRUE,
+			),
+			'uid' => array(
+				'type' => 'int',
+				'unsigned' => TRUE,
+				'not null' => FALSE,
+			),
+			'subject' => array(
+				'type' => 'varchar',
+				'default' => '',
+				'length' => 255,
+				'not null' => FALSE,	
+			),
+			'grade' => array(
+				'type' => 'varchar',
+				'default' => '',
+				'length' => 255,
+				'not null' => FALSE,
+			),
+			'institution' => array(
+				'type' => 'varchar',
+				'default' => '',
+				'length' => 255,
+				'not null' => FALSE,
+			),
+			'qualification' => array(
+				'type' => 'varchar',
+				'default' => '',
+				'length' => 255,
+				'not null' => FALSE,
+			),
+		),
+		'primary key' => array(id),	
+	);
+	$schema['health_info'] = array(
+		'description' => t('Health info'),
+		'fields' => array(
+			'id' => array(
+				'type' => 'serial',
+				'unsigned' => TRUE,
+				'not null' => TRUE,
+			),	
+			'uid' => array(
+				'type' => 'int',
+				'unsigned' => TRUE,
+				'not null' => FALSE,
+			),
+			'status' => array(
+				'type' => 'varchar',
+				'default' => '',
+				'length' => 255,
+				'not null' => FALSE,
+			),
+			'disabilities' => array(
+				'type' => 'varchar',
+				'default' => '',
+				'length' => 255,
+				'not null' => FALSE,
+			),
+		),
+		'primary key' => array('id'),
+	);
+	$schema['next_of_kin_info'] = array(
+		'description' => t('Next of kin info'),
+		'fields' => array(
+			'id' => array(
+				'type' => 'serial',
+				'unsigned' => TRUE,
+				'not null' => TRUE,	
+			),
+			'uid' => array(
+				'type' => 'int',
+				'unsigned' => TRUE,
+				'not null' => FALSE,
+			),
+			'title' => array(
+				'type' => 'varchar',
+				'default' => '',
+				'length' => 255,
+				'not null' => FALSE,
+			),
+			'name' => array(
+				'type' => 'varchar',
+				'default' => '',
+				'length' => 255,
+				'not null' => FALSE,
+			),	
+			'phone' => array(
+				'type' => 'varchar',
+				'default' => '',
+				'length' => 255,
+				'not null' => FALSE,
+			),
+			'mobile' => array(
+				'type' => 'varchar',
+				'default' => '',
+				'length' => 255,
+				'not null' => FALSE,
+			),
+			'address1' => array(
+				'type' => 'varchar',
+				'default' => '',
+				'length' => 255,
+				'not null' => FALSE,
+			),
+			'address2' => array(
+				'type' => 'varchar',
+				'default' => '',
+				'length' => 255,
+				'not null' => FALSE,
+			),
+			'relationship' => array(
+				'type' => 'varchar',
+				'default' => '',
+				'length' => 255,
+				'not null' => FALSE,
+			),
+		),	
+		'primary key' => array('id'),	
+	);
+	$schema['sponsors_info'] = array(
+		'description' => t(''),
+		'fields' => array(
+			'id' => array(
+				'type' => 'serial',
+				'unsigned' => TRUE,
+				'not null' => TRUE,
+			),
+			'uid' => array(
+				'type' => 'int',
+				'unsigned' => TRUE,
+				'not null' => FALSE,
+			),
+			'name' => array(
+				'type' => 'varchar',
+				'default' => '',
+				'length' => 255,
+				'not null' => FALSE,
+			),
+			'address1' => array(
+				'type' => 'varchar',
+				'default' => '',
+				'length' => 255,
+				'not null' => FALSE,
+			),
+			'address2' => array(
+				'type' => 'varchar',
+				'default' => '',
+				'length' => 255,
+				'not null' => FALSE,
+			),
+			'nationality' => array(
+				'type' => 'varchar',
+				'default' => '',
+				'length' => 255,
+				'not null' => FALSE,
+			),
+			'state' => array(
+				'type' => 'varchar',
+				'default' => '',
+				'length' => 255,
+				'not null' => FALSE,
+			),
+			'phone' => array(
+				'type' => 'varchar',
+				'default' => '',
+				'length' => 255,
+				'not null' => FALSE,
+			),
+			'mobile' => array(
+				'type' => 'varchar',
+				'default' => '',
+				'length' => 255,
+				'not null' => FALSE,
+			),
+		),
+
+		'primary key' => array('id'),
+	);
+	return $schema;
 }
 function nurspri_school_acm_roles(){
   // Add new roles by name
