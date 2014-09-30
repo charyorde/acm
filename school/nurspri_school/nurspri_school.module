@@ -117,7 +117,9 @@ function uni_school_admission_sponsors_form($form_id){
 	return $form;
 }
 function uni_school_admission_sponsors_form_submit($form, &$form_state){
+	global $user;
 	$values = $form_state['values'];
+	$values['uid']=$user->uid;
 	$success = drupal_write_record('sponsors_info',$values);
 	$form_state['redirect'] = '/student/admission/nextofkin/form';
 }
@@ -174,7 +176,7 @@ function uni_school_admission_nextofkin_form($form_id){
 function uni_school_admission_nextofkin_form_submit($form, &$form_state){
 	global $user;
 	$values = $form_state['values'];
-	$values['profileid']=$user->uid;
+	$values['uid']=$user->uid;
 	$success = drupal_write_record('next_of_kin_info',$values);
 	$form_state['redirect'] = '/student/admission/health/form';
 }
@@ -201,7 +203,7 @@ function uni_school_admission_health_form($form_id){
 function uni_school_admission_health_form_submit($form, &$form_state){
 	global $user;
 	$values = $form_state['values'];
-	$values['profileid']=$user->uid;
+	$values['uid']=$user->uid;
 	$success = drupal_write_record('health_info',$values);
 	$form_state['redirect'] = '/';
 }
