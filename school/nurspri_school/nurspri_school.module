@@ -1,4 +1,211 @@
 <?php 
+function nurspri_school_menu(){
+	$items = array(
+		'student/admission/course/form' => array(
+			'title' => t('Application course form'),
+			'description' => t('Application course form'),
+			'page callback' => 'drupal_get_form',
+			'access arguments' => array('access content'),
+			'page arguments' => array('uni_school_admission_course_form'),	
+			'type' => MENU_NORMAL_ITEM,
+		),
+		'student/admission/sponsors/form' => array(
+			'title' => t('Application sponsor form'),
+			'description' => t('Application sponsor form'),
+			'page callback' => 'drupal_get_form',
+			'access arguments' => array('access content'),
+			'page arguments' => array('uni_school_admission_sponsors_form'),	
+			'type' => MENU_NORMAL_ITEM,
+		),
+		'student/admission/nextofkin/form' => array(
+			'title' => t('Application nextofin form'),
+			'description' => t('Application nextofin form'),
+			'page callback' => 'drupal_get_form',
+			'access arguments' => array('access content'),
+			'page arguments' => array('uni_school_admission_nextofkin_form'),	
+			'type' => MENU_NORMAL_ITEM,
+		),
+		'student/admission/health/form' => array(
+			'title' => t('Application health form'),
+			'description' => t('Application health form'),
+			'page callback' => 'drupal_get_form',
+			'access arguments' => array('access content'),
+			'page arguments' => array('uni_school_admission_health_form'),	
+			'type' => MENU_NORMAL_ITEM,
+		),
+		
+	);
+	return $items;
+}
+
+function uni_school_admission_course_form($form_id){
+	$form['profileemail'] = array(
+		'#type' => 'textfield',
+		'#title' => t('Profile Email:'),
+		'#prefix' => '<div class="required-data">',
+		'#suffix' => '</div>' , 
+	);
+	$form['status'] = array(
+		'#type' => 'textfield',
+		'#title' => t('Status:'),
+		'#prefix' => '<div class="required-data">',
+		'#suffix' => '</div>' , 
+	);
+	$form['submit'] = array(
+		'#type' => 'submit',
+		'#value' => t('Next'),
+		'#submit' => array('uni_school_admission_course_form_submit'),
+	);
+	return $form;
+}
+function uni_school_admission_course_form_submit($form, &$form_state){
+	global $user;
+	$values = $form_state['values'];
+	$values['profileid']=$user->uid;
+	$success = drupal_write_record('student_application',$values);
+	$form_state['redirect'] = '/student/admission/sponsors/form';
+
+}
+function uni_school_admission_sponsors_form($form_id){
+	$form['name'] = array(
+		'#type' => 'textfield',
+		'#title' => t('Name:'),
+		'#prefix' => '<div class="required-data">',
+		'#suffix' => '</div>' , 
+	);
+	$form['address1'] = array(
+		'#type' => 'textfield',
+		'#title' => t('Address:'),
+		'#prefix' => '<div class="required-data">',
+		'#suffix' => '</div>' , 
+	);
+	$form['address2'] = array(
+		'#type' => 'textfield',
+		'#title' => t('Address2:'),
+		'#prefix' => '<div class="required-data">',
+		'#suffix' => '</div>' , 
+	);
+	$form['nationality'] = array(
+		'#type' => 'textfield',
+		'#title' => t('Nationality:'),
+		'#prefix' => '<div class="required-data">',
+		'#suffix' => '</div>' , 
+	);
+	$form['state'] = array(
+		'#type' => 'textfield',
+		'#title' => t('State:'),
+		'#prefix' => '<div class="required-data">',
+		'#suffix' => '</div>' , 
+	);
+	$form['phone'] = array(
+		'#type' => 'textfield',
+		'#title' => t('Phone:'),
+		'#prefix' => '<div class="required-data">',
+		'#suffix' => '</div>' , 
+	);
+	$form['mobile'] = array(
+		'#type' => 'textfield',
+		'#title' => t('Mobile:'),
+		'#prefix' => '<div class="required-data">',
+		'#suffix' => '</div>' , 
+	);
+	$form['submit'] = array(
+		'#type' => 'submit',
+		'#value' => t('Next'),
+		'#submit' => array('uni_school_admission_sponsors_form_submit'),
+	);
+	return $form;
+}
+function uni_school_admission_sponsors_form_submit($form, &$form_state){
+	$values = $form_state['values'];
+	$success = drupal_write_record('sponsors_info',$values);
+	$form_state['redirect'] = '/student/admission/nextofkin/form';
+}
+function uni_school_admission_nextofkin_form($form_id){
+	$form['title'] = array(
+		'#type' => 'textfield',
+		'#title' => t('Title:'),
+		'#prefix' => '<div class="required-data">',
+		'#suffix' => '</div>' , 
+	);
+	$form['name'] = array(
+		'#type' => 'textfield',
+		'#title' => t('Name:'),
+		'#prefix' => '<div class="required-data">',
+		'#suffix' => '</div>' , 
+	);
+	$form['phone'] = array(
+		'#type' => 'textfield',
+		'#title' => t('Phone:'),
+		'#prefix' => '<div class="required-data">',
+		'#suffix' => '</div>' , 
+	);
+	$form['mobile'] = array(
+		'#type' => 'textfield',
+		'#title' => t('Mobile:'),
+		'#prefix' => '<div class="required-data">',
+		'#suffix' => '</div>' , 
+	);
+	$form['address1'] = array(
+		'#type' => 'textfield',
+		'#title' => t('Address:'),
+		'#prefix' => '<div class="required-data">',
+		'#suffix' => '</div>' , 
+	);
+	$form['address2'] = array(
+		'#type' => 'textfield',
+		'#title' => t('Address2:'),
+		'#prefix' => '<div class="required-data">',
+		'#suffix' => '</div>' , 
+	);
+	$form['relationship'] = array(
+		'#type' => 'textfield',
+		'#title' => t('Relationship:'),
+		'#prefix' => '<div class="required-data">',
+		'#suffix' => '</div>' , 
+	);
+	$form['submit'] = array(
+		'#type' => 'submit',
+		'#value' => t('Next'),
+		'#submit' => array('uni_school_admission_nextofkin_form_submit'),
+	);
+	return $form;
+}
+function uni_school_admission_nextofkin_form_submit($form, &$form_state){
+	global $user;
+	$values = $form_state['values'];
+	$values['profileid']=$user->uid;
+	$success = drupal_write_record('next_of_kin_info',$values);
+	$form_state['redirect'] = '/student/admission/health/form';
+}
+function uni_school_admission_health_form($form_id){
+   $form['status'] = array(
+		'#type' => 'textfield',
+		'#title' => t('Status:'),
+		'#prefix' => '<div class="required-data">',
+		'#suffix' => '</div>' , 
+	);
+	$form['disabilities'] = array(
+		'#type' => 'textfield',
+		'#title' => t('Disabilities:'),
+		'#prefix' => '<div class="required-data">',
+		'#suffix' => '</div>' , 
+	);	
+	$form['submit'] = array(
+		'#type' => 'submit',
+		'#value' => t('Next'),
+		'#submit' => array('uni_school_admission_health_form_submit'),
+	);
+	return $form;
+}
+function uni_school_admission_health_form_submit($form, &$form_state){
+	global $user;
+	$values = $form_state['values'];
+	$values['profileid']=$user->uid;
+	$success = drupal_write_record('health_info',$values);
+	$form_state['redirect'] = '/';
+}
+
 /*
  * Render student application profile items 
  * hook_acm_student_application()
