@@ -1,0 +1,259 @@
+<?php 
+/*
+ * Render student application profile items 
+ * hook_acm_student_application()
+ */
+function proschool_acm_student_application(){
+	global $user;
+  switch($_GET['edit']) {
+  case 'app':
+      $profile = acm_school_profile_load($user->uid);
+      return drupal_get_form('acm_school_student_profile_form', (array)$profile->profile, NULL);
+  }
+  switch($_GET['app']) {
+  case 'sponsor':
+      drupal_set_title('Sponsor');
+      $studentApplication = views_get_view('uni_student_application_view');
+      $studentApplication->display = 'sponsor';
+      break;
+    case 'course':
+      drupal_set_title('Course');
+        $studentApplication = views_get_view('uni_student_application_view');
+        $studentApplication->display = 'course';
+        break;
+    case 'nextofkin':
+      drupal_set_title('Next of Kin');
+        $studentApplication = views_get_view('uni_student_application_view');
+        $studentApplication->display = 'nextofkin';
+        break;
+    default:
+        $studentApplication = views_get_view('uni_student_application_view');
+        $studentApplication->display = 'default';
+        break;
+  }
+  return $studentApplication;
+
+}
+/*
+ * hook represents a label of items that should be configured for student application
+ * profile view
+ * hook_acm_student_application_items()
+ */
+function proschool_acm_student_application_items(){
+  $items = array();
+  $items['sponsor'] = array(
+    'data' => l('Sponsor Information', 'application/sponsor')
+  );
+  $items['course'] = array(
+    'data' => l('Course Information', 'application/course')
+);
+  return $items;
+
+
+}
+/*
+ * Defines the next step after admission application
+ * hook_admission_application_info()
+ */
+function proschool_admission_application_info(){
+	$application_form = array(
+    'course' => array(
+      'title' => 'course',
+      'form_id' => 'uni_school_admission_course_form'
+    ),
+    'sponsor' => array(
+      'title' => 'sponsor',
+      'form_id' => 'uni_school_admission_sponsors_form'
+    ),
+    'nextofkin' => array(
+      'title' => 'nextofkin',
+      'form_id' => 'uni_school_admission_nextofkin_form'
+    ),
+    'health' => array(
+      'title' => 'health',
+      'form_id' => 'uni_school_admission_health_form'
+    ),
+  );
+  return $application_form;
+
+}
+/*
+ * This hook defines the setting for school admission 
+ * hook_admission_settings($type)
+ */
+function proschool_admission_settings($type){
+	 if($type == 'status') {
+    $settings['admission']['admission_status_form'] = drupal_get_form('uni_school_admission_settings_form');
+  }
+  return $settings;
+
+}
+/*
+ * setting for structure of each Academic module
+ * hook_school_settings()
+ */
+function proschool_school_settings(){
+	 $settings['type'] = 'configure';
+  
+  $settings['configure']['admission'] = array(
+    'title' => t('Set admission status'),
+    'callback url' => t('admin/settings/school/admission/status')
+  );
+  $settings['configure']['users'] = array(
+    'title' => 'Configure users',
+    'callback url' => 'admin/settings/school/users'
+  );
+  $settings['configure']['fees'] = array(
+    'title' => 'Setup Fees',
+    'callback url' => 'admin/settings/school/fees'
+  );
+  $settings['configure']['dorm'] = array(
+    'title' => 'Configure dormitory allocation',
+    'callback url' => 'admin/settings/school/dormitory'
+  );
+  $settings['configure']['faculty'] = array(
+    'title' => 'Add faculty',
+    'callback url' => 'admin/settings/school/faculty/add'
+  );
+  $settings['configure']['department'] = array(
+    'title' => 'Add department',
+    'callback url' => 'admin/settings/school/department/add'
+  );
+  $settings['configure']['grade'] = array(
+    'title' => 'Configure grading system',
+    'callback url' => 'admin/settings/school/grade/gradingsystem'
+  );
+  
+  $settings['configure']['school_settings'] = drupal_get_form('uni_school_school_settings_form');
+  
+  return $settings;
+
+}
+/*
+ * view of student application made into a school
+ * hook_admission_application_list()
+ */
+function proschool_admission_application_list(){
+  $admission_view = views_get_view('uni_admission_view');
+  return $admission_view;
+}
+/*
+ * Describe the academic level of a school
+ * hook_academic_level()
+ */
+function proschool_academic_level(){
+ return drupal_map_assoc(array(100, 200, 300, 400, 500, 600, 700));
+
+}
+/*
+ * display all the faculties in a school
+ * hook_faculty()
+ */
+function proschool_faculty(){
+
+}
+/*
+ * Display all the departments in a school
+ * hook_department()
+ */
+function proschool_department(){
+
+}
+/*
+ * Display all student grade in a school
+ * hook_grade()
+ */
+function proschool_grade(){
+// For example, a university school type grade display
+  $grade_view = views_get_view('uni_grade_view');
+  return $grade_view;
+}
+
+
+/*
+ * Configure all the grade settings for a school
+ * hook_grade_settings()
+ */
+function proschool_grade_settings($type){
+$settings['type'] = 'grade';
+  $settings['grade']['configure'] = array(
+    'title' => t('Configure grading system'),
+    'callback url' => 'admin/settings/school/grade/gradingsystem'
+  );
+  // set global grading point
+  $settings['grade']['grade point'] = array(
+    'title' => 'Set grade point',
+    'callback url' => 'admin/settings/school/grade/gradepoint'
+  );
+  // set grading point for a specific department
+  // A staff in medicine department should be able to contact the IT
+  // staff (Acadaman authorized user) to set medicine department
+  // grade point to 7
+  $settings['grade']['department grade point'] = array(
+    'title' => 'Set department grade point',
+    'callback url' => 'admin/settings/school/grade/dept_gradepoint'
+  );
+  $settings['grade']['grade a student'] = array(
+    'title' => 'Grade a student',
+    'callback url' => 'admin/settings/school/grade/add'
+  );
+  $settings['grade']['score a student'] = array(
+    'title' => 'Score a student',
+    'callback url' => 'admin/settings/school/score/add'
+  );
+  if($type == 'gradingsystem') {
+    $settings['grade']['gradingsystem_form'] = drupal_get_form('uni_school_gradingsystem_settings_form');
+  }
+  if($type == 'gradepoint') {
+    $settings['grade']['gradepoint_form'] = drupal_get_form('uni_school_gradepoint_settings_form'); 
+  }
+  if($type == 'dept_gradepoint') {
+    $settings['grade']['dept_gradepoint_form'] = drupal_get_form('uni_school_dept_gradepoint_settings_form');
+  }
+  if($type == 'add') {
+    $settings['grade']['grade_form'] = drupal_get_form('uni_school_grade_form');
+  }
+  
+  return $settings;
+}
+/*
+ * Configured all the score settings for a school
+ * hook_score_settings()
+ */
+function proschool_score_settings($type){
+$settings['type'] = 'score';
+  if($type == 'add') {
+    $settings['score']['score_form'] = drupal_get_form('uni_school_score_form');
+  }
+  return $settings;
+
+}
+/*
+ * Display fee catalog of a school
+ * hook_fees_catalog()
+ */
+function proschool_fees_catalog(){
+return array('General', 'Program Specific');
+}
+
+/*
+ * Display fee catalog of a school
+ * hook_setup_tasks()
+ */
+ 
+  function proschool_setup_tasks(){
+ // Example setup tasks for a University school type.
+  if($_GET['step'] == 'setup') {
+    $step = 'add-faculty';
+    $output = drupal_get_form('uni_school_setup_faculty_form');
+    variable_set('setup_step', 'faculty');
+  }
+  
+  if($_GET['step'] == 'course'){
+    $step = 'add-course';
+    $output = drupal_get_form('uni_school_setup_course_form');
+    variable_set('setup_step', 'course');
+  }
+  
+  return $output;
+}
