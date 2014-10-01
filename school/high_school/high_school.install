@@ -1,0 +1,25 @@
+<?php
+/**
+* Implementation of hook_install().
+*/
+function high_school_install() {
+ 
+}
+/**
+* Implementation of hook_uninstall().
+*/
+function high_school_uninstall() {
+  
+}
+function high_school_acm_roles(){
+  // Add new roles by name
+  return array ();
+}
+function high_school_acm_roles_perm(){
+  // Add new permission
+  return array (
+	'Staff' => 'administer school settings',
+  );
+}
+
+

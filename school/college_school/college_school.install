@@ -1,0 +1,23 @@
+<?php
+/**
+* Implementation of hook_install().
+*/
+function college_school_install() {
+  
+}
+/**
+* Implementation of hook_uninstall().
+*/
+function college_school_uninstall() {
+  
+}
+function college_school_acm_roles(){
+  // Add new roles by name
+  return array ('Rector','Faculty');
+}
+function college_school_acm_roles_perm(){
+  // Add new permission
+  return array (
+	'Staff' => 'administer school settings',
+  );
+}
