@@ -26,9 +26,42 @@ function hook_acm_schoolprofile() {
  *  - nextofkin
  *  -
  *
- *  This hook is powered by views module. 
+ *  This hook is powered by views module for displaying the student application.
  */
 function hook_acm_student_application() {
+  global $user;
+
+  // Edit a student profile with a query params like this: ?edit=app
+  switch($_GET['edit']) {
+  case 'app':
+      // $student_application object for the current student
+      $profile = acm_school_profile_load($user->uid);
+      return drupal_get_form('acm_school_student_profile_form', (array)$profile->profile, NULL);
+  }
+
+  // Display student application sponsor profile, course profile, and nextofkin profile.
+  switch($_GET['app']) {
+  case 'sponsor':
+      drupal_set_title('Sponsor');
+      $studentApplication = views_get_view('uni_student_application_view');
+      $studentApplication->display = 'sponsor';
+      break;
+    case 'course':
+      drupal_set_title('Course');
+        $studentApplication = views_get_view('uni_student_application_view');
+        $studentApplication->display = 'course';
+        break;
+    case 'nextofkin':
+      drupal_set_title('Next of Kin');
+        $studentApplication = views_get_view('uni_student_application_view');
+        $studentApplication->display = 'nextofkin';
+        break;
+    default:
+        $studentApplication = views_get_view('uni_student_application_view');
+        $studentApplication->display = 'default';
+        break;
+  }
+  return $studentApplication;
 
 }
 
@@ -231,7 +264,7 @@ function hook_faculty_settings($type) {
  * This hook defines all the department settings meant to be 
  * configured for a school.
  */ 
-function hook_department_settings() {
+function hook_department_settings($type) {
   // Example department settings
   $settings['type'] = 'department';
   $settings['dept']['add'] = array(
@@ -262,7 +295,7 @@ function hook_department_settings() {
  * This hook defines all the programme settings meant to be
  * configured for a school.
  */ 
-function hook_programme_settings() {
+function hook_programme_settings($type) {
   // Example programme settings
   $settings['type'] = 'programme';
   $settings['prog']['add'] = array(
@@ -314,7 +347,7 @@ function hook_course_settings() {
  * This hook defines all the grade settings meant to be
  * configured for a school.
  */ 
-function hook_grade_settings() {
+function hook_grade_settings($type) {
   $settings['type'] = 'grade';
   $settings['grade']['configure'] = array(
     'title' => t('Configure grading system'),
