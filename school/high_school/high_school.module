@@ -3,10 +3,11 @@
  * Render student application profile items 
  * hook_acm_student_application()
  */
-function nurspri_school_acm_student_application(){
-     global $user;
-     switch($_GET['edit']) {
-     case 'app':
+function high_school_acm_student_application(){
+	global $user;
+  switch($_GET['edit']) {
+  case 'app':
+      // $student_application object for the current student
       $profile = acm_school_profile_load($user->uid);
       return drupal_get_form('acm_school_student_profile_form', (array)$profile->profile, NULL);
   }
@@ -32,13 +33,14 @@ function nurspri_school_acm_student_application(){
         break;
   }
   return $studentApplication;
+
 }
 /*
  * hook represents a label of items that should be configured for student application
  * profile view
  * hook_acm_student_application_items()
  */
-function nurspri_school_acm_student_application_items(){
+function high_school_acm_student_application_items(){
   $items = array();
   $items['sponsor'] = array(
     'data' => l('Sponsor Information', 'application/sponsor')
@@ -47,12 +49,14 @@ function nurspri_school_acm_student_application_items(){
     'data' => l('Course Information', 'application/course')
 );
   return $items;
+
+
 }
 /*
  * Defines the next step after admission application
  * hook_admission_application_info()
  */
-function nurspri_school_admission_application_info(){
+function high_school_admission_application_info(){
 	$application_form = array(
     'course' => array(
       'title' => 'course',
@@ -72,13 +76,15 @@ function nurspri_school_admission_application_info(){
     ),
   );
   return $application_form;
+
+
 }
 /*
  * This hook defines the setting for school admission 
  * hook_admission_settings($type)
  */
-function nurspri_school_admission_settings($type){
-	if($type == 'status') {
+function high_school_admission_settings($type){
+	 if($type == 'status') {
     $settings['admission']['admission_status_form'] = drupal_get_form('uni_school_admission_settings_form');
   }
   return $settings;
@@ -87,9 +93,9 @@ function nurspri_school_admission_settings($type){
  * setting for structure of each Academic module
  * hook_school_settings()
  */
- 
-function nurspri_school_school_settings(){
-  $settings['type'] = 'configure';
+function high_school_school_settings(){
+	$settings['type'] = 'configure';
+  
   $settings['configure']['admission'] = array(
     'title' => t('Set admission status'),
     'callback url' => t('admin/settings/school/admission/status')
@@ -120,7 +126,6 @@ function nurspri_school_school_settings(){
   );
   
   $settings['configure']['school_settings'] = drupal_get_form('uni_school_school_settings_form');
-  
   return $settings;
 
 }
@@ -128,7 +133,7 @@ function nurspri_school_school_settings(){
  * view of student application made into a school
  * hook_admission_application_list()
  */
-function nurspri_school_admission_application_list(){
+function high_school_admission_application_list(){
  $admission_view = views_get_view('uni_admission_view');
   return $admission_view;
 }
@@ -136,15 +141,15 @@ function nurspri_school_admission_application_list(){
  * Describe the academic level of a school
  * hook_academic_level()
  */
-function nurspri_school_academic_level(){
- return drupal_map_assoc(array(100, 200, 300, 400, 500, 600, 700));
+function high_school_academic_level(){
 
+ return drupal_map_assoc(array(100, 200, 300, 400, 500, 600, 700));
 }
 /*
  * Display all student grade in a school
  * hook_grade()
  */
-function nurspri_school_grade(){
+function high_school_grade(){
   $grade_view = views_get_view('uni_grade_view');
   return $grade_view;
 }
@@ -152,7 +157,7 @@ function nurspri_school_grade(){
  * Configure all the grade settings for a school
  * hook_grade_settings()
  */
-function nurspri_school_grade_settings($type){
+function high_school_grade_settings($type){
 $settings['type'] = 'grade';
   $settings['grade']['configure'] = array(
     'title' => t('Configure grading system'),
@@ -187,37 +192,37 @@ $settings['type'] = 'grade';
   if($type == 'add') {
     $settings['grade']['grade_form'] = drupal_get_form('uni_school_grade_form');
   }
+  
   return $settings;
 }
 /*
  * Configured all the score settings for a school
  * hook_score_settings()
  */
-function nurspri_school_score_settings($type){
+function high_school_score_settings($type){
 $settings['type'] = 'score';
   if($type == 'add') {
     $settings['score']['score_form'] = drupal_get_form('uni_school_score_form');
   }
   return $settings;
+
 }
 /*
  * Display fee catalog of a school
  * hook_fees_catalog()
  */
-function nurspri_school_fees_catalog(){
+function high_school_fees_catalog(){
 return array('General', 'Program Specific');
 }
 /*
  * Display fee catalog of a school
  * hook_setup_tasks()
  */
- 
-function nurspri_school_setup_tasks(){
+function high_school_setup_tasks(){  
   if($_GET['step'] == 'course'){
     $step = 'add-course';
     $output = drupal_get_form('uni_school_setup_course_form');
     variable_set('setup_step', 'course');
   }
   return $output;
-
 }
