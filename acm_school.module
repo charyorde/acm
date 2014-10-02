@@ -1,0 +1,2956 @@
+<?php
+
+/*
+ * @file
+ *
+ * An educational institution. A school within Acadaman can be registered.
+ *
+ * Drupal implementation of school module
+ */
+
+define('COURSE_REGISTERED', TRUE);
+define('COURSE_NOT_REGISTERED', FALSE);
+
+/**
+ * Implements hook_menu
+ */
+function acm_school_menu() {
+    global $admission_application_info_label;
+ 
+  $modules = array('uni_school', 'nurspri_school', 'high_school', 'college_school');
+  
+  $items = array();
+  // if variable_get(acm_instance, '') == 1, make this menu item available, else return 404
+  if(!variable_get('setup_step', 'done') && variable_get('acm_instance', 0)) {
+    $items['setup'] = array(
+      'title' => t('Setup Acadaman'),
+      'description' => t('Setup Acadaman for the first time'),
+      'page callback' => 'acm_school_setup',
+      'access callback' => TRUE,
+      'type' => MENU_CALLBACK,
+    );
+  }
+
+  // @deprecated. /setup is used.
+  $items['schoolsetup'] = array(
+    'title' => t('Setup'),
+    'description' => t('School setup'),
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('acm_school_setup_user_form', 1), // function callback
+    'access arguments' => array('setup school'), 
+    'access callback' => TRUE // user_access('setup school'). any hook_access works here
+  );
+  $items['setup/user/add'] = array(
+    'title' => t('Setup Acadaman - Add User'),
+    'description' => t('Add user(s)'),
+    'page callback' => 'drupal_get_form',
+    'page arguments' => 'acm_school_setup_user_form', // form id
+    'access arguments' => array(),
+    'type' => MENU_CALLBACK,
+  );
+  $items['setup/faculty/add'] = array(
+    'title' => t('Setup Acadaman - Add Faculty'),
+    'description' => t('Add faculty(s)'),
+    'page callback' => 'drupal_get_form',
+    'page arguments' => 'acm_school_setup_faculty_form', // form id
+    'access arguments' => array(),
+    'type' => MENU_CALLBACK,
+  );
+  // General settings for a school
+  $items['admin/settings/school'] = array(
+    'title' => t('School Settings'),
+    'description' => t('Acadaman school settings'),
+    'page callback' => 'acm_school_settings_callback',
+    //'access callback' => array('administer nodes'), // change to administer settings
+    'access arguments' => array('administer school settings'),
+    'type' => MENU_CALLBACK
+  );
+  // Settings for school admission
+  $items['admin/settings/school/admission/%'] = array(
+    'title' => t('Configure Admission'),
+    'description' => t('School admission settings'),
+    'page callback' => 'acm_school_settings_admission_callback',
+    'page arguments' => array(4),
+    'access arguments' => array('administer school settings'),
+    'type' => MENU_CALLBACK
+  );
+  // View current settings of admission
+  $items['admission'] = array(
+    'title' => t('Admission'),
+    'description' => t('Admission'),
+    'page callback' => 'acm_school_admission_view_callback',
+    'access arguments' => array('view admission'),
+    'access callback' => TRUE,
+    'type' => MENU_CALLBACK
+  );
+  // callback form for a student application
+  $items['admission/apply'] = array(
+    'title' => t('Application to [School name]'),
+    'description' => t('Student application for admission to a school'),
+    //'page callback' => 'acm_school_admission_application_callback',
+    'page callback' => 'acm_school_admission_form',
+    //'page arguments' => array('acm_school_admission_form'),
+    'access arguments' => array(), // create admission application - only anon has access
+    'access callback' => TRUE,
+    'type' => MENU_CALLBACK
+  );
+  // profile edit
+  $items['admission/apply/%acm_school_profile/profile/edit'] = array(
+    'title' => 'Edit Profile',
+    //'title arguments' => 
+    'page callback' => 'acm_school_profile_edit',
+    'page arguments' => array(2),
+    'access callback' => TRUE, //'acm_school_profile_access',
+    'access arguments' => array(), //array(1),
+    'type' => MENU_CALLBACK,
+    //'load arguments' => array('%uid', '%index')
+    'load arguments' => array(2)
+  );
+  // profile edit urls for the rest of application labels as implemented
+  // by different modules
+  if($admission_application_info_label) {
+    foreach($admission_application_info_label as $key => $label) {
+      // remove profile. Already handled by admission/apply/%/profile/edit
+      if($key == 'profile') {
+        unset($label);
+      }
+      if($key == 'module') {
+        $module = $label;
+      }
+      // construct the rest of the menu items
+      //$items["admission/apply/%$module_admission_$key/%acm_school_profile/edit"] = array(
+        
+      //);
+    }
+  }
+  // menu items for admission application Information
+  foreach(module_implements('admission_application_info') as $module) {
+      $info = module_invoke($module, 'admission_application_info');
+      foreach($info as $key => $value)
+      $items["admission/apply/%acm_school_profile/" . $value['title'] . "/edit"] = array(
+        'title' => 'Edit ' . $value['title'],
+        //'page callback' => "$module_admission_" . $value['title'] . 'edit',
+        'page callback' => $module . '_admission_' . $value['title'] . '_edit',
+        'page arguments' => array(2),
+        'access callback' => TRUE, 
+        'access arguments' => array(),
+        'type' => MENU_CALLBACK,
+        'load arguments' => array(2)
+      );
+  }
+     /* $items["admission/apply/%acm_school_profile/course/edit"] = array(
+        'title' => 'Edit Course',
+        'page callback' => 'uni_school_admission_course_edit',
+        'page arguments' => array(2),
+        'access callback' => TRUE, 
+        'access arguments' => array(),
+        'type' => MENU_CALLBACK,
+        'load arguments' => array(2)
+    );*/
+  
+  // callback to the view of admission applications
+  $items['admission/applications'] = array(
+    'title' => t('Admission applications'),
+    'description' => t('List of applicant admission applications'),
+    'page callback' => 'acm_school_admission_applications_list_callback',
+    'access arguments' => array(''), // view admission applications
+    'access callback' => TRUE,
+    'type' => MENU_CALLBACK
+  );
+  // Acadaman custom home
+  $items['front'] = array(
+    'title' => t('Welcome to Acadaman!'),
+    'description' => t('Acadaman dashboard'),
+    'page callback' => 'acm_school_frontpage_callback', // hook_dashboard
+    'access callback' => TRUE,
+    'access arguments' => array(), // access content
+    'type' => MENU_CALLBACK
+  );
+  // Details of a student application to a school
+  // A student application is her profile
+  // for student admission form @see admission/apply
+  $items['application'] = array(
+    'title' => t('MyApplication'),
+    'description' => t('Student application'),
+    'page callback' => 'acm_school_student_application_view_callback',
+    'access arguments' => array('view student application'),
+    'access callback' => TRUE,
+    'type' => MENU_CALLBACK
+);
+  //$items['application/profile/edit'] = array(
+  
+  //);
+    $items['courses'] = array(
+      'title' => t('Courses'),
+      'description' => t('Student course registration'),
+      'page callback' => 'acm_school_student_course_callback',
+      //'page arguments' => array(1),
+      'access arguments' => array('register course'), // see student module in 'student course'
+      'access callback' => TRUE,
+      //'load arguments' => array('%map'),
+      'type' => MENU_CALLBACK
+    );
+  if(acm_school_module_exists(array('uni_school', 'college_school'))) {
+    $items['programme/%acm_school_programme'] = array(
+      'title' => t(''),
+      'description' => t(''),
+      'page callback' => 'acm_school_programme_callback',
+      'page arguments' => array(1),
+      'access arguments' => array('view programme'),
+      'access callback' => TRUE,
+      'load arguments' => array('%map'),
+      'type' => MENU_CALLBACK
+    );
+    /*$items['course/%acm_school_course'] = array(
+      'title' => t('Course'),
+      'description' => t('Course'),
+      'page callback' => 'acm_school_course_callback',
+      'page arguments' => array(1),
+      'access arguments' => array('view course'),
+      'access callback' => TRUE,
+      'load arguments' => array('%map'),
+      'type' => MENU_CALLBACK
+    );*/
+    // student course register ajax callback
+    $items['courses/ajax/register'] = array(
+      'page callback' => 'student_course_register_ajax',
+      'access callback' => TRUE,
+      'type' => MENU_CALLBACK,
+    );
+    // settings for course
+    $items['admin/settings/school/course/%'] = array(
+      'title' => t('Configure Course - %'),
+      'description' => t('Course settings'),
+      'page callback' => 'acm_school_settings_course_callback',
+      'page arguments' => array(4),
+      'access arguments' => array('administer course settings'),
+      'access callback' => TRUE,
+      'load arguments' => array('%map'),
+      'type' => MENU_CALLBACK
+    );
+    // settings for course
+    /*$items['admin/settings/school/course/configure/%'] = array(
+      'title' => t('Configure %'),
+      'description' => t('Course settings'),
+      'page callback' => 'acm_school_configure_course_callback',
+      'page arguments' => array(1),
+      'access arguments' => array('administer course settings'),
+      'type' => MENU_CALLBACK
+    );*/
+    // faculty view and features
+    $items['faculty/%acm_school_faculty'] = array(
+      'title' => t('Faculty'),
+      'description' => t('School Faculty'),
+      'page callback' => 'acm_school_faculty_view',
+      'page arguments' => array(1),
+      'access arguments' => array('view faculty'),
+      'access callback' => TRUE,
+      'load arguments' => array('%map'),
+      'type' => MENU_CALLBACK
+    );
+    // settings for faculty
+    $items['admin/settings/school/faculty/%'] = array(
+      'title' => t('Configure Faculty'),
+      'description' => t('School faculty settings'),
+      'page callback' => 'acm_school_settings_faculty_callback',
+      'page arguments' => array(4),
+      'access arguments' => array('administer faculty settings'),
+      'type' => MENU_CALLBACK
+    );
+    // The department of a student
+    $items['department/%'] = array(
+      'title' => t('Department'),
+      'description' => t('School Department'),
+      'page callback' => 'acm_school_department_view',
+      'page arguments' => array(1),
+      'access arguments' => array('view department'),
+      'access callback' => TRUE,
+      'type' => MENU_CALLBACK
+    );
+    // settings for department
+    $items['admin/settings/school/department/%'] = array(
+      'title' => t('Configure Department'),
+      'description' => t('School department settings'),
+      'page callback' => 'acm_school_settings_department_callback',
+      'page arguments' => array(4),
+      'access arguments' => array('administer department settings'),
+      'type' => MENU_CALLBACK
+    );
+  }
+  // programme settings
+  $items['admin/settings/school/programme/%'] = array(
+    'title' => t('Configure Programme'),
+    'description' => t('School programme settings'),
+    'page callback' => 'acm_school_settings_programme_callback',
+    'page arguments' => array(4),
+    'access arguments' => array('administer programme settings'),
+    'type' => MENU_CALLBACK
+);
+  // grade view and features
+  $items['grade'] = array(
+    'title' => t('Grade'),
+    'description' => t('School Grade'),
+    'page callback' => 'acm_school_grade_view',
+    'access arguments' => array('view grade'),
+    'access callback' => TRUE,
+    'type' => MENU_CALLBACK
+  );
+  // General settings for grade
+  $items['admin/settings/school/grade/%'] = array(
+    'title' => t('Configure Grade'),
+    'description' => t('School grade settings'),
+    'page callback' => 'acm_school_settings_grade_callback',
+    'page arguments' => array(4),
+    'access arguments' => array('administer school settings'), // change to administer grade settiings
+    'type' => MENU_CALLBACK
+  );
+  $items['grade/ahah/grade-system/callback'] = array(
+    'page callback' => 'grade_system_dropdown_callback',
+    'access callback' => TRUE,
+    'type' => MENU_CALLBACK
+  );
+  // Config to score a student
+  $items['admin/settings/school/score/%'] = array(
+    'title' => t('Score a student'),
+    'description' => t('Student score'),
+    'page callback' => 'acm_school_settings_score_callback',
+    'page arguments' => array(4),
+    'access arguments' => array('score a student'),
+    'type' => MENU_CALLBACK
+  );
+  $items['score/ahah/programme/callback'] = array(
+    'page callback' => 'score_programme_dropdown_callback',
+    'access callback' => TRUE,
+    'type' => MENU_CALLBACK,
+  );
+  $items['score/ahah/course/callback'] = array(
+    'page callback' => 'score_course_dropdown_callback',
+    'access callback' => TRUE,
+    'type' => MENU_CALLBACK
+  );
+  $items['score/ahah/score/callback'] = array(
+    'page callback' => 'acm_school_score_autotextfields_callback',
+    'access callback' => TRUE,
+    'type' => MENU_CALLBACK
+  );
+  // fees view and features
+  $items['fees'] = array(
+    'title' => t('Fees'),
+    'description' => t('School Fees'),
+    'page callback' => 'acm_school_fees_view_callback',
+    'access arguments' => array('view fees'),
+    'access callback' => TRUE,
+    'type' => MENU_CALLBACK
+  );  
+  // settings for fees
+  $items['admin/settings/school/fees'] = array(
+    'title' => t('Configure Fees'),
+    //'title arguments' => '',
+    'description' => t('School fees settings'),
+    'page callback' => 'acm_school_settings_fees_callback',
+    'access arguments' => array('administer fees settings'),
+    'access callback' => TRUE,
+    'type' => MENU_CALLBACK
+  );
+  $items['admin/settings/school/fees/%'] = array(
+    'title' => t('Configure Fees'),
+    //'title arguments' => '',
+    'description' => t('School fees settings'),
+    'page callback' => 'acm_school_settings_fees_callback',
+    'page arguments' => array(4),
+    'access arguments' => array('administer fees settings'),
+    'access callback' => TRUE,
+    'type' => MENU_CALLBACK
+  );
+  $items['admin/settings/school/fees/%/%/setup'] = array(
+    'title' => t('Setup Fees'),
+    'description' => t('Setup fees for the institution'),
+    'page callback' => 'acm_school_settings_fees_setup_callback',
+    'page arguments' => array(4,5),
+    'access arguments' => array('administer fees settings'),
+    'access callback' => TRUE,
+    'type' => MENU_CALLBACK
+  );
+  // General settings for users
+  $items['admin/settings/school/users'] = array(
+    
+  );
+  // myapplication
+  // course
+  // department
+  // mygrades
+  // fees
+  // dorm
+  return $items;
+}
+
+/**
+ * Implements hook_perm 
+ *
+ * @return array
+ */
+function acm_school_perm(){
+  return array(
+    'administer school settings','view admission','view faculty',
+    'administer faculty settings','administer department settings',
+    'view student application', 'view student applications', 'setup school',
+    'administer course settings', 'administer grade settings',
+    'administer fees settings', 'administer programme settings', 'register course', 'score a student'
+  );
+}
+
+/**
+ * Implements hook_acm_roles_perm
+ * 
+ * Assigns permission(s) to role(s) 
+ *
+ * @return array
+ */
+function acm_school_acm_roles_perm() {
+  return array(
+    'Staff' => 'administer school settings',
+    'Staff' => 'view admission',
+    'Staff' => 'administer faculty settings',
+    'Staff' => 'administer department settings',
+    'Staff' => 'administer grade settings',
+    'Staff' => 'administer course settings',
+    'Staff' => 'administer programme settings',
+    'Student' => 'view student application',
+    'Staff' => 'view student applications', // view all student applications
+    'Staff' => 'setup school',
+    'Student' => 'register course',
+    'Lecturer' => 'score a student'
+  );
+}
+
+/**
+ * Implements hook_acm_roles 
+ * 
+ * Defines default roles for the school module
+ *
+ * @return array
+ */
+function acm_school_acm_roles() {
+  // Available default roles for all school types
+  return array('Applicant', 'Student', 'Bursar', 'Supervisor', 'Cleaner', 'Student parent', 'Staff');
+}
+
+/**
+ * Menu callback to setup acadaman for the first time  
+ *
+ * Handles the setup process to setup a school for the first time.
+ * Setup task items are:
+ *  - add-user
+ */
+function acm_school_setup() {
+  global $base_url;
+  // module_invoke hook_acm_setup_form
+  /*foreach(module_implements('acm_setup_form') as $module) {
+    // lists = module_invoke('setup_steps_list');
+  }*/
+  
+  // the first hook defines the steps wc contains the form ids
+  // and inside it, it also registers another hook, that keeps tab of the implementation of the steps
+  
+  // setup_steps_list
+  // 
+  // setup_steps($step) // called inside setup_step_list. Alternatively, we can just get everything done inside setup_steps
+  if(!isset($_GET['step']) | empty($_GET['step'])) {
+    $step = 'add-user';
+    $output = drupal_get_form('acm_school_setup_user_form');
+  }
+  
+  // this is always called
+  if(isset($_GET['step']) && !in_array($_GET['step'], acm_school_reserved_steps())) {
+    foreach(module_implements('setup_tasks') as $module) { 
+      $output = module_invoke($module, 'setup_tasks');
+    }
+  }
+  
+  if($_GET['step'] == 'finished') {
+    $output = '<p>' . t('Your school has been setup successfully') . '</p>';
+    $output .= '<p>' . t('Please visit the @admin to configure other school settings.', array('@admin' => l('school settings page', $base_url . '/admin/settings/school'))) . '</p>';
+    $step = 'done';
+    variable_set('setup_step', 'done');
+    variable_set('acm_instance', 1);
+    // @todo remove /setup from menu_router
+  }
+  
+  return $output;
+}
+
+/**
+ * Form callback to setup user.
+ *
+ * Adds the Acadaman user and assigns the staff role. This user
+ * is the admin user for this Acadaman instance. 
+ *
+ * The super-user (uid 1) account is kept with Acadaman for remote
+ * administration purposes.
+ *
+ * @todo Add clearer docs
+ */ 
+function acm_school_setup_user_form(&$form_state) {
+  $form['#attributes'] = array('class' => 'form-horizontal');
+  $form['username'] = array(
+    '#type' => 'textfield',
+    '#title' => 'Username',
+    //'#required' => TRUE
+  );
+  $form['password'] = array(
+    
+  );
+  $form['email'] = array();
+  $form['role'] = array();
+  
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Save and continue'),
+    //'#weight' => 15,
+  );
+  //watchdog('setup', 'url is @url', array('@url' => $url));
+  //$form['#action'] = $url;
+  //$form['#redirect'] = FALSE;
+  
+  // Allow the profile to alter this form. $form_state isn't available
+  // here, but to conform to the hook_form_alter() signature, we pass
+  // an empty array.
+  /*$hook_form_alter = $_GET['profile'] .'_form_alter';
+  if (function_exists($hook_form_alter)) {
+    $hook_form_alter($form, array(), 'install_configure');
+  }*/
+  return $form;
+  
+}
+
+/**
+ * acm_school_setup_user_form submit callback
+ * @param type $form
+ * @param type $form_state 
+ */
+function acm_school_setup_user_form_submit($form, $form_state) {
+  // if validation is successful
+  
+  // make sure this form id is removed from $form['setup']
+  drupal_goto('setup', 'step=setup');
+}
+
+/**
+ * A list of setup steps
+ *
+ * @deprecated @see acm_school_setup
+ */ 
+function acm_school_steps_list($active = NULL) {
+  $steps = array('setup-user' => t('Add User'));
+  
+  // Add steps defined by other modules hook_steps_list implementation.
+  foreach(module_implements('steps_list') as $module) {
+    $result = module_invoke($module, 'steps_list');
+  }
+  if(is_array($result)) {
+    $steps += $result;
+  }
+  
+  // Add finished step as the last task.
+  $steps += array('finished');
+  
+  // Let the theming function know that 'finished' and 'done'
+  // include everything, so every step is completed.
+  if (in_array($active, array('finished', 'done'))) {
+    $active = NULL;
+  }
+}
+
+/**
+ * called in setup() to verify setup
+ * if step == finished or done, redirect to dashboard
+ *
+ * @deprecated @see acm_school_setup
+ */ 
+function verify_setup() {
+  // Read the variable manually using the @ so we don't trigger an error if it fails.
+  $result = @db_query("SELECT value FROM {variable} WHERE name = '%s'", 'install_step');
+  if ($result) {
+    return unserialize(db_result($result));
+  }
+}
+
+/**
+ * The list of reserved tasks to run in the installer.
+ */
+function acm_school_reserved_steps() {
+  //return array('setup', 'setup-user', 'setup-finished', 'finished', 'done');
+  return array('finished', 'done');
+}
+
+
+/**
+ * Menu callback for /acadaman 
+ */
+function acm_school_frontpage_callback() {
+  if(!user_is_logged_in()) {
+    variable_set('site_frontpage', 'user/login');
+    drupal_goto();
+  }
+  foreach(module_implements('acm_dashboard') as $module) {
+    variable_set('site_frontpage', 'front');
+    return module_invoke($module, 'acm_dashboard'); 
+  }
+}
+
+/**
+ * Implements hook_acm_dashboard 
+ * 
+ * @todo Implement activity stream for the dashboard in an IFrame
+ */
+function acm_school_acm_dashboard() {
+  global $user;
+  drupal_set_title('Welcome to Acadaman!');
+  //(array)$user->profile = acm_school_profile_load($user->uid);
+  $content = array('name' => 'Dashboard');
+  //$content['profile'] = $user->profile;
+  //dsm($user->profile);
+  $content['profile_card'] = theme('profile_card', $user->profile);
+  
+  $updates = array(t('Updates'));
+  //$content['updates'] = theme('updates', $updates);
+  $content['updates'] = t('Updates');
+  //$title = 'Dashboard';
+  // common dashboard not dependent on role type
+  //return theme('item_list', $items, $title);
+  return theme('acm_dashboard', $content);
+}
+
+/**
+ * @see acm_school_theme
+ */ 
+function theme_profile_card($profile) {
+  $picture = theme('profile_picture', $profile['picture']);
+  $fullnames = theme('fullnames', $profile);
+  $output = "<div>$picture $fullnames</div>";
+  return $output;
+}
+
+/**
+ * Theme user fullnames
+ *
+ * @see acm_school_theme
+ */ 
+function theme_fullnames($profile) {
+  $firstname = $profile['firstname'];
+  $lastname = $profile['lastname'];
+  $fullnames = implode(' ', array($firstname, $lastname));
+  return "<h3>$fullnames</h3>";
+}
+
+/**
+ * Theme user profile picture
+ *
+ * @see acm_school_theme
+ */ 
+function theme_profile_picture($profile) {
+  $picture = $profile['picture'];
+  return theme('image', $picture);
+}
+
+function theme_updates($updates) {
+  
+}
+
+/**
+ * Implements hook_FORM_ID_alter
+ */ 
+function acm_school_form_user_login_alter(&$form, $form_state) {
+  
+  // Ensure a valid submit array.
+  $form['#submit'] = is_array($form['#submit']) ? $form['#submit'] : array();
+
+  // Replace core's registration function with custom registration function.
+  // Put the custom submit handler first, so other submit handlers have a valid
+  // user to work with upon registration.
+  $key = array_search('user_login_submit', $form['#submit']);
+  if ($key !== FALSE) {
+    unset($form['#submit'][$key]);
+  }
+  array_unshift($form['#submit'], 'acm_school_user_login_submit');
+}
+
+/**
+ * Submit callback to login a user.
+ *
+ * @see acm_school_form_user_login_alter
+ */ 
+function acm_school_user_login_submit($form, &$form_state) {
+  global $user;
+  // if variable_get('acm_instance', 1) == 1 // set by drush during install
+  // redirect to /setup
+  // return;
+  // else
+  //if (variable_get('acm_instance', '') == TRUE && $user->uid) {// the eduerp admin
+  if(variable_get('acm_instance', 0) && $user->uid) {
+    watchdog('login', 'logged in user has access and logs in successfully');
+    $form_state['redirect'] = 'setup';
+    return;
+  } else {
+    if ($user->uid) {
+      // set instance variable to 0 after completion of the post-install steps
+      variable_set('site_frontpage', 'front');
+      //$form_state['redirect'] = 'user/'. $user->uid; // /acadaman (the dashboard)
+      $form_state['redirect'] = '';
+      return;
+    }
+  }
+} 
+
+/**
+ * Implements hook_FORM_ID_alter
+ */ 
+function acm_school_form_search_theme_form_alter(&$form, $form_state) {
+  $form['search_theme_form']['#title'] = '';
+  $form['search_theme_form']['#attributes'] = array('class' => 'span3');
+  $form['submit']['#attributes'] = array('class' => 'hidden');
+}
+
+/**
+ * Implements hook_theme 
+ */
+function acm_school_theme() {
+  $template_path = array('path' => drupal_get_path('module', 'acm_school') . '/templates');
+  
+  $theme = array(
+    'course' => array(
+      'arguments' => array('node' => NULL, 'course' => NULL),
+      //'template' => 'course',
+    ),
+    'acm_dashboard' => $template_path + array(
+      'arguments' => array('content' => NULL),
+      'template' => 'acm_dashboard', // acm_dashboard is implemented as template hook. To implement as function, remove this line
+    ),
+    'school_settings' => $template_path + array(
+      'arguments' => array('school_settings' => NULL),
+      'template' => 'school_settings',
+    ),
+    'faculty_view' => $template_path + array(
+      'arguments' => array('faculty' => NULL),
+      'template' => 'faculty'
+    ),
+    'department_view' => $template_path + array(
+      'arguments' => array('department' => NULL),
+      'template' => 'department'
+    ),
+    'grade_view' => array(
+      'arguments' => array('grade' => NULL),
+      //'template' => 'grade'
+    ),
+    'fees_view' => $template_path + array(
+      'arguments' => array('fees' => NULL),
+      'template' => 'fees'
+    ),
+    'fees_item_list' => array(
+      'arguments' => array('view' => NULL)
+    ),
+    'admission_view' => $template_path + array(
+      'arguments' => array('admission' => NULL),
+      'template' => 'admission'
+    ),
+    'student_application' => array( // student application
+      'arguments' => array('student_application' => NULL),
+      //'template' => 'student_application'
+  ),
+  'student_course' => array(
+    'arguments' => array('student_course' => NULL)
+  ),
+    'admission_applications' => array(
+      'arguments' => array('admission_applications' => NULL),
+    ),
+    'profile_picture' => array(
+      'arguments' => array('profile' => NULL)
+    ),
+    'fullnames' => array(
+      'arguments' => array('profile' => NULL)
+    ),
+    'profile_card' => array(
+      'arguments' => array('profile' => NULL)
+    ),
+    'updates' => array(
+      'arguments' => array('updates' => NULL)
+  ),
+  'student_profile_form' => array(
+    'arguments' => array('form' => NULL)
+  ),
+  );
+  
+  return $theme;
+}
+
+/**
+ * Implements hook_acm_school_info 
+ */
+function acm_school_acm_school_info() {
+  
+}
+
+/**
+ * Implements hook_acm_school_profile 
+ */
+function acm_school_acm_school_profile() {
+  
+}
+
+/**
+ * Implements hook_acm_school_analytics 
+ */
+function acm_school_acm_school_analytics() {
+  
+}
+
+/**
+ * Implements hook_acm_studentprofile 
+ * 
+ * A student profile is contained in student application
+ */
+function acm_school_acm_studentprofile($profile) {
+  return drupal_get_form("acm_school_student_profile_form", $profile, NULL);
+}
+
+/**
+ * Form callback handler for student profile form
+ *
+ * @see acm_school_acm_studentprofile
+ */ 
+function acm_school_student_profile_form(&$form_state, $profile, $steps_order, $hook = 'profile') {
+  $edit = (empty($form_state['values'])) ? (array)$profile : $form_state['values'];
+
+  $form['#attributes'] = array('class' => 'form-horizontal');
+  $form['basic'] = array(
+    '#type' => 'markup',
+    '#value' => '<div style="background:#f6f6f2; padding:5px">Basic Information</div>',
+    '#weight' => -30
+  );
+  $form['firstname'] = array(
+    '#type' => 'textfield',
+    '#title' => t('First name'),
+    '#default_value' => $edit['firstname'],
+    '#required' => TRUE,
+    /*'#prefix' => '<div class="controls">',
+    '#suffix' => '</div>'*/
+    '#weight' => -29
+  );
+  $form['lastname'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Last name'),
+    '#default_value' => $edit['lastname'],
+    '#required' => TRUE,
+    '#weight' => -28
+  );
+  $form['other'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Other'),
+    '#default_value' => $edit['other'],
+    '#weight' => -27
+  );
+  $form['email'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Email'),
+    '#default_value' => $edit['email'],
+    '#required' => TRUE,
+    '#weight' => -26
+  );
+  $gender = array('M' => 'M', 'F' => 'F');
+  $form['gender'] = array(
+    '#type' => 'select',
+    '#title' => t('Gender'),
+    '#options' => $gender,
+    '#default_value' => $edit['gender'],
+    '#required' => TRUE,
+    '#weight' => -25
+  );
+  // add dob here. YYYY-MM-DD
+  // stored as timestamp, converted to individual date
+  // elements on retrieval @see date()
+  
+  $form['phone'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Phone'),
+    '#default_value' => $edit['phone'],
+    '#weight' => -24
+  );
+  $form['mobile'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Mobile'),
+    '#default_value' => $edit['mobile'],
+  );
+  $form['maritalstatus'] = array(
+    '#type' => 'select',
+    '#title' => t('Marital status'),
+    '#options' => MaritalStatus::listMaritalStatus(),
+    '#default_value' => $edit['maritalstatus'],
+    '#required' => TRUE,
+  );
+  $form['nationality'] = array(
+    '#type' => 'select',
+    '#title' => t('Nationality'),
+    '#default_value' => $edit['nationality'],
+    '#options' => array(0 => 'Other'), // LocationCountry::listLocationCountry()
+    //'#required' => TRUE,
+  );
+  $form['state'] = array(
+    '#type' => 'select',
+    '#title' => t('State'),
+    '#options' => array(0 => 'Other'), // LocationState::listLocationState()
+    '#default_value' => $edit['state'],
+    '#required' => TRUE,
+  );
+  $form['city'] = array(
+    '#type' => 'textfield',
+    '#title' => t('City'),
+    '#default_value' => $edit['city'],
+  );
+  $form['postalcode'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Postal or zip code'),
+    '#default_value' => $edit['postalcode'],
+    '#required' => TRUE
+  );
+  $form['lga'] = array( // Only applicable to British colonized countries
+    '#type' => 'select',
+    '#title' => t('LGA'),
+    '#options' => array(0 => 'Other'), // LocationLga::listLocationLga()
+    '#default_value' => $edit['lga'],
+  );
+  $form['religion'] = array(
+    '#type' => 'select',
+    '#title' => t('Religion'),
+    '#options' => array(0 => 'Other'),
+    '#default_value' => $edit['religion'],
+  );
+  $form['address1'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Address1'),
+    '#default_value' => $edit['address1'],
+    '#required' => TRUE,
+  );
+  $form['address2'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Address2'),
+    '#default_value' => $edit['address2'],
+  );
+  
+  $form['picture'] = array(
+    '#type' => 'file',
+    '#title' => t('Photo'),
+    '#default_value' => $edit['picture'],
+    '#description' => t('upload a photo'),
+  );
+  $form['signature'] = array(
+    '#type' => 'file',
+    '#title' => t('Signature'),
+    '#default_value' => $edit['signature'],
+    '#description' => t('upload your signature'),
+  );
+  if(!isset($profile['profile_state'])) { // change to !isset($edit)
+    $form['submit'] = array(
+      '#type' => 'submit',
+      '#value' => 'Save and continue',
+      '#attributes' => array('class' => 'btn'),
+    );
+  } else {
+    $form['submit'] = array(
+      '#type' => 'submit',
+      '#value' => 'Save',
+      '#attributes' => array('class' => 'btn'),
+  );
+  }
+  // use of _ and setting of it's value as a form element automatically
+  // places this in form_state['values'] for easy access in submit and
+  // validate functions
+  $form['_current'] = array('#type' => 'value', '#value' => $hook);
+  $form['_steps'] = array('#type' => 'value', '#value' => $steps_order);
+  //$form['_profile'] = array('#type' => 'value', '#value' => $profile);
+  $form['_profile'] = array('#type' => 'value', '#value' => $edit);
+  $form['#theme'] = array('acm_school_student_profile_form', 'student_profile_form');
+  return $form;
+}
+
+/**
+ * Submit callback for adding or updating a profile
+ * 
+ * @param type $form
+ * @param type $form_state 
+ */
+function acm_school_student_profile_form_submit($form, &$form_state) {
+  $profile = $form_state['values']['_profile'];
+  $steps = $form_state['values']['_steps'];
+  $current = $form_state['values']['_current'];
+  $email = $form_state['values']['email'];
+
+  dsm($form_state['values']);
+  /*$maritalstatus = Utils::array_value_given_key($form_state['values']['maritalstatus'], MaritalStatus::listMaritalStatus());
+  $form_state['values']['maritalstatus'] = $maritalstatus;
+  
+  $gender = Utils::array_value_given_key($form_state['values']['gender'], array(1 => 'M', 2 => 'F'));
+  $form_state['values']['gender'] = $gender;*/
+  
+  if($current == 'profile') {
+      //$next = current($steps);
+      $next = current($current);
+  }else if(!next($steps)) {
+    $next = next($steps);
+  }
+  
+  $success = FALSE;
+  // checks using the email address to know if the account exists before or not
+  // if it does, returns false and display a message to continue application
+  // from a particular url
+  // current = variable_get()
+  // next = the next array value starting from current
+  // on successful insert, insert into student_application.stepindex = current
+  $profile_fields = drupal_get_schema('profile');
+  $profile_table = 'profile';
+  $profile_items = array();
+  $result = db_query("SELECT * FROM {profile} WHERE email = '%s'", $email);
+  while($profile_object = db_fetch_object($result)) {
+    $profile_items['email'] = $profile_object->email;
+  }
+  $tracker = db_result(db_query("SELECT step FROM {student_application_tracker} WHERE email = '%s'", $email));
+  
+  if(!empty($profile_items) && $tracker == 'finished') {
+    // @Todo Add in a check for application approval to determine if profile
+    // is editable
+    // it's an edit for a completed profile
+    //drupal_write_record($profile_table, $profile, array('uid','email'));
+    drupal_write_record($profile_table, $form_state['values'], 'email');
+    $success = TRUE;
+    if($success) {
+        drupal_set_message('Profile updated successfully');
+        // redirect to referrer or stay on same page and set status message
+      return;
+    }
+  }
+  if((!empty($profile_items) && $profile_items['email'] == $email) && (isset($tracker) && $tracker != 'finished')) { // tracker is not null and is not equal to finished
+    // it is an uncompleted application process
+    // do an update
+    drupal_write_record($profile_table, $form_state['values'], array('email'));
+    drupal_set_message(t('Seems you have an uncompleted application. Please continue <a href="/admission/apply?step=' . $tracker. '&c=' . base64_encode($email) . '">here</a>'), 'error');
+    return FALSE;
+    // load the profile and redirect to next to continue application
+    //drupal_goto('admission/apply', 'step=' . $tracker, 301);
+  }
+  if(empty($profile_items)) {
+    drupal_write_record($profile_table, $form_state['values']);
+    // also insert into student_application_tracker
+    $tracker_data = array('email' => $email, 'step' => $next['title']);
+    drupal_write_record('student_application_tracker', $tracker_data);
+    
+    // insert into student_applications
+    $student_application['profileid'] = db_last_insert_id('profile', 'id');
+    $student_application['profileemail'] = $email;
+    drupal_write_record('student_application', $student_application);
+    
+    $success = TRUE;
+  }
+  if($success) {
+    drupal_goto('admission/apply', 'step=' . $next['title'] . '&c=' . base64_encode($email), 301); // encode the email into the url
+  }
+}
+
+/**
+ * Save or update profile object 
+ */
+function acm_school_profile_save($profile, $data) {
+  
+}
+
+/**
+ * Implements hook_acm_faculty 
+ */
+function acm_school_acm_faculty() {
+  
+}
+
+/**
+ * Implements hook_acm_department 
+ */
+function acm_school_acm_department() {
+  
+}
+
+/**
+ * Menu callback for course menu 
+ */
+function acm_school_course_callback($course = null) {
+  // get the current user
+  global $user;
+  
+  // validate access privileges
+  
+  
+  return module_invoke_all('acm_course', $course);
+}
+
+/**
+ * Implements hook_acm_course 
+ */
+function acm_school_acm_course($course) {
+  // course object
+  if(is_null($course)) {
+    $course = new stdClass();
+    $course->title = 'Course';
+  }
+  
+  // node object
+  
+  // call theme_course for rendering and display
+  return theme('course', $course);
+}
+
+/**
+ * Implements hook_acm_course_register 
+ */
+function acm_school_acm_course_register() {
+  // get user
+  
+  // call theme
+  
+  // invoke callback
+}
+
+/**
+ *
+ * @param type $course 
+ */
+function theme_course($course) {
+  return $course->title;
+}
+
+/**
+ * theme_acm_dashboard implementation
+ */
+function theme_acm_dashboard($content) {
+  $element = '<div class="">Dashboard</div>';
+  return '<p><div>'. t('Dashboard.') .'</div></p>';
+  //return theme('markup', $element);
+}
+
+/**
+ * Implements hook_acm_programme 
+ */
+function acm_school_acm_programme() {
+  
+}
+
+/**
+ * Implements hook_acm_schoolpublication 
+ */
+function acm_school_schoolpublication() {
+  
+}
+
+/**
+ * Implements hook_acm_activity 
+ */
+function acm_school_acm_activity() {
+  
+}
+
+/**
+ * Student application menu callback 
+ *
+ * @see acm_school_menu
+ */
+function acm_school_student_application_view_callback() {
+  
+  // call school implementation of acm_student_application
+  foreach(module_implements('acm_student_application') as $module) {
+    $student_application = module_invoke($module, 'acm_student_application'); 
+  }
+  //views_get_view_result($student_application->name, 'default');
+
+  $output = views_embed_view($student_application->name, $student_application->display);
+  // call admission_application_info_label()
+  foreach(module_implements('student_application_items') as $module) {
+      $items = module_invoke($module, 'student_application_items');
+  }
+  return theme('student_application', $output, $items);
+  //return views_embed_view($student_application->name, 'default');
+  
+  //return theme('student_application', $student_application);
+}
+
+/**
+ * Implements hook_student_application_items
+ * @see acm_school_student_application_view_callback
+ */ 
+function acm_school_student_application_items() {
+  $items = array();
+  return $items;
+}
+
+/**
+ * theme_student_application implementation
+ * @see acm_school_theme()
+ * 
+ * @param type $view
+ * @param type $items
+ * @return type 
+ */
+function theme_student_application($view, $items) {
+    global $user;
+  $output = "<div class='span9'>$view</div>";
+  $output .= "<div id='app-menu' class='span3 pull-right'>";
+  /*foreach($items as $key => $item) {
+    $output .= $item['theme'];
+  }*/
+  $element = array(
+      '#button_type' => 'button',
+    '#name' => '',
+    '#value' => 'Update'
+  );
+  //$output .= theme('button', $element);
+  // admission/apply/$user->uid/$item[name]/edit
+  $output .= '<div style="text-align:right; margin-bottom: 20px">' . l(t('Update'), 'admission/apply/' . $user->uid . '/edit', array('attributes' => array('class' => 'btn acm-link'))) . '</div>';
+  if(!empty($items)) {
+      $output .= theme('item_list', $items);
+  }
+  //$output .= "<div class='span3 pull-right'>$items</div>";
+  $output .= "</div>";
+  return $output;
+}
+
+/**
+ * Theme function for student course listing page.
+ *
+ * @see acm_school_menu
+ */ 
+function theme_student_course($view, $items) {
+
+  $output = "<div class='span9'>$view</div>";
+  $output .= "<div id='app-menu' class='span3 pull-right'>";
+
+  //dsm($view);
+  // add here js code that adds checkboxes and submit button to the view.
+  // drupal_add_js
+  drupal_add_js(drupal_get_path('module', 'acm_school') .'/acm_school.js');
+  //drupal_add_js("Drupal.behaviors.studentCourse.apply('this, [" + $output + "]')", 'inline', 'footer');
+  //drupal_add_js("Drupal.behaviors.studentCourse.apply(this, ['<p>hello</p>'])", 'inline', 'footer');
+  $output .= "</div>";
+  return $output;
+}
+
+/**
+ * Implements hook_acm_student_application 
+ */
+function acm_school_acm_student_application() {
+  
+}
+
+/**
+ * Menu callback for admission/apply 
+ *
+ * @see acm_school_menu
+ */
+function acm_school_admission_application_callback() {
+  // @Todo
+  // Replace with module_invoke of admission_application_info hook
+  // parse keys for what isset
+  //static $steps_order = array();
+  /*foreach(module_implements('admission_application_info') as $module) {
+    $admission_form = module_invoke($module, 'admission_application_info');
+  }*/
+  
+  $admission_form = module_invoke_all('admission_application_info');
+  
+  if(!isset($steps_order)) {
+    /*if(isset($admission_form['profile'])){
+      $steps_order['profile'] = $admission_form['profile'];
+    }*/
+
+    if(isset($admission_form['course'])) {
+      $steps_order['course'] = $admission_form['course'];
+    }
+
+    if(isset($admission_form['sponsor'])) {
+      $steps_order['sponsor'] = $admission_form['sponsor'];
+    }
+
+    if(isset($admission_form['nextofkin'])) {
+      $steps_order['nextofkin'] = $admission_form['nextofkin'];
+    }
+
+    if(isset($admission_form['health'])) {
+      $steps_order['health'] = $admission_form['health'];
+    }
+
+    if(isset($admission_form['examresults'])) {
+      $steps_order['examresults'] = $admission_form['examresults'];
+    }
+  }
+  
+  //admission_application_info_label($steps_order);
+  
+  // all application forms will have implementation in acm_school
+  // steps_order only tells us which one to go to next based on what is implemented at admission_application_info
+  // in submit, we can simply do $steps_order.next();
+  // 
+  //drupal_get_form('acm_school_admission_form', $steps_order); 
+  call_user_func_array('acm_school_admission_form', $steps_order);
+  /*foreach(module_implements('admission_form_id') as $module) {
+    $admission_form = module_invoke($module, 'admission_form_id'); 
+  }*/
+  
+  /*$form = drupal_get_form('acm_school_student_profile_form', $edit);
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => 'Save and continue',
+    '#attributes' => array('class' => 'btn')
+  );
+  return $form;*/
+  //return drupal_get_form($admission_form, NULL);
+}
+
+/**
+ * Menu callback for student application
+ *
+ * @see acm_school_menu
+ */
+function acm_school_admission_form() {
+  global $base_url, $admission_application_info_label;
+  
+  foreach(module_implements('admission_application_info') as $module) {
+    $admission_form = module_invoke($module, 'admission_application_info');
+  }
+  
+  if(!isset($steps_order)) {
+    if(isset($admission_form['course'])) {
+      $steps_order['course'] = $admission_form['course'];
+    }
+    if(isset($admission_form['sponsor'])) {
+      $steps_order['sponsor'] = $admission_form['sponsor'];
+    }
+    if(isset($admission_form['nextofkin'])) {
+      $steps_order['nextofkin'] = $admission_form['nextofkin'];
+    }
+    if(isset($admission_form['health'])) {
+      $steps_order['health'] = $admission_form['health'];
+    }
+    if(isset($admission_form['examresults'])) {
+      $steps_order['examresults'] = $admission_form['examresults'];
+    }
+  }
+  
+  $admission_application_info_label = $steps_order;
+  $admission_application_info_label['module'] = $module;
+  
+  if(!isset($_GET['step']) | empty($_GET['step']) | $_GET['step'] == 'profile') {
+    $form = drupal_get_form('acm_school_student_profile_form', NULL, $steps_order);
+  }
+  if(isset($_GET['step']) && isset($steps_order[$_GET['step']])) {
+    $form = drupal_get_form($steps_order[$_GET['step']]['form_id'], NULL, $steps_order, $_GET['step']);
+  }
+  if($_GET['step'] == 'finished') {
+    // update into student_application
+    $student_application['status'] = 'Application';
+    drupal_write_record('student_application', $student_application, 'id');
+    
+    $form = t("Thank you. Your application has been submitted successfully. " . '<a href="' . $base_url . '">Continue</a>');
+  }
+  return $form;
+}
+
+/**
+ * Menu callback for admission/applications 
+ */
+function acm_school_admission_applications_list_callback() {
+  // module_implements admission_applications_list or admission_applications_report
+  foreach(module_implements('admission_applications_list') as $module) {
+    $applications = module_invoke($module, 'admission_applications_list'); 
+  }
+  
+  $output = views_embed_view($applications->name);
+   
+  return theme('admission_applications', $output);
+}
+
+/**
+ * Renders admission applications view
+ *
+ * @see acm_school_admission_applications_list_callback
+ */ 
+function theme_admission_applications($view) {
+  return $view;
+}
+
+/**
+ * Implements hook_acm_admission 
+ */
+function acm_school_acm_admission() {
+  
+}
+
+/**
+ * Implements hook_acm_grade 
+ */
+function acm_school_acm_grade() {
+  
+}
+
+/**
+ * Implements hook_acm_grade_reports 
+ */
+function acm_school_acm_grade_reports() {
+  
+}
+
+/**
+ * Implements hook_acm_attendance 
+ */
+function acm_school_acm_attendance() {
+  
+}
+
+function acm_school_preprocess_page(&$vars) {
+  global $user;
+  // exclude backend pages to avoid core js not working anymore
+  // you could also just use a backend theme to avoid this
+//  if (arg(0) != 'admin' || !(arg(1) == 'add' && arg(2) == 'edit') || arg(0) != 'panels' || arg(0) != 'ctools') {
+//    $scripts = drupal_add_js();
+//    $new_jquery = array(drupal_get_path('theme', 'acadaman_bootstrap') . '/js/jquery-1.7.min.js' => $scripts['core']['misc/jquery.js']);
+//    $scripts['core'] = array_merge($new_jquery, $scripts['core']);
+//    unset($scripts['core']['misc/jquery.js']);
+//    $vars['scripts'] = drupal_get_js('header', $scripts);
+//  }
+
+  if(user_is_logged_in() && drupal_is_front_page()) {
+    variable_set('site_frontpage', 'front');
+    $vars['template_file'] = 'page';
+  }
+  if(!$user->uid && !drupal_is_front_page()) {
+  }
+}
+
+/**
+ * Implements hook_jqmulti_files
+ *
+ * Define javascript files that should be processed by jqmulti
+ */
+function acm_school_jqmulti_files() {
+  $files = array(
+    drupal_get_path('module', 'acm_school') .'/acm_school.js',
+    drupal_get_path('module', 'acm_school') .'/course_materials_edit.js',
+    drupal_get_path('module', 'acm_school') .'/scripts/libs/underscore.js',
+    drupal_get_path('module', 'acm_school') .'/scripts/lib/jiverscripts/src/oo/class.js',
+    drupal_get_path('module', 'acm_school') .'/scripts/lib/jiverscripts/src/conc/next_tick.js',
+    drupal_get_path('module', 'acm_school') .'/scripts/lib/jiverscripts/src/conc/observable.js',
+    drupal_get_path('module', 'acm_school') .'/scripts/lib/jiverscripts/src/conc/promise.js',
+    drupal_get_path('module', 'acm_school') . '/scripts/jive/namespace.js',
+    drupal_get_path('module', 'acm_school') . '/scripts/jive/dispatcher.js',
+    drupal_get_path('module', 'acm_school') . '/scripts/jive/drupal_rest.js',
+    drupal_get_path('module', 'acm_school') . '/scripts/apps/shared/models/drupal_rest_service.js',
+    drupal_get_path('module', 'acm_school') . '/scripts/jquery/jquery.define.js',
+    drupal_get_path('module', 'acm_school') . '/scripts/jquery/jquery.message.js',
+    drupal_get_path('module', 'acm_school') . '/scripts/shared/display_utils.js',
+    drupal_get_path('theme', 'acadaman_bootstrap') . '/js/bootstrap.min.js',
+  );
+  return $files;
+}
+
+/**
+ * Only called if implementation is via a template and not a theme
+ * function
+ * 
+ * @param type $vars 
+ */
+function template_preprocess_acm_dashboard(&$vars) {
+  $vars['template_files'][] = 'acm_dashboard';
+  $hooks = theme_get_registry();
+}
+
+function template_preprocess_school_settings(&$vars) {
+  $vars['template_files'][] = 'school_settings';
+  if($vars['school_settings']['type'] === 'configure') {
+    //$vars['semester_settings_form'] = drupal_get_form('uni_school_semester_settings_form'); 
+  }
+  
+  if($vars['school_settings']['type'] === 'admission') {
+    //$vars['admission_settings_form'] = drupal_get_form('uni_school_admission_settings_form');
+    //$vars['admission_settings_form'] = $x;
+  }
+}
+
+/**
+ * The hook here is student_application
+ * @param type $vars 
+ */
+function template_preprocess_student_application(&$vars) {
+}
+
+/**
+ * Add or Modify default template variables in a particular hook
+ * @param type $variables
+ * @param type $hook 
+ */
+function acm_school_preprocess(&$variables, $hook) {
+}
+
+/**
+ * Implements hook_FORM_ID_alter
+ */ 
+function acm_school_form_course_content_node_form_alter($form, &$form_state) {
+  if($form['#node']->title == 'Course materials') {
+    if(arg(2) == 'edit') {
+      // add course_materials_edit.js
+      drupal_add_js(drupal_get_path('module', 'acm_school') . '/course_materials_edit.js');
+      // remove preview and delete buttons
+      unset($form['buttons']['preview']);
+      unset($form['buttons']['delete']);
+
+      // Convert all uploaded files to image thumbnail
+      $form['buttons']['submit']['#submit'][] = 'acm_school_convert_files_to_image_submit';
+      //array_unshift($form['buttons']['submit']['#submit'], 'acm_school_convert_files_to_image_submit');
+    }
+    
+  }
+}
+
+/**
+ * Converts files to image after successful upload
+ *
+ * @deprecated
+ */
+function acm_school_convert_files_to_image_submit($form, &$form_state) {
+  // for each newly added files, execute drush command that converts files to imagecache
+  // field_file_load(fid) to check if file exists already.
+  // If it exist, it must have been converted. So proceed to only files that dont exist
+  // use imagecache to create image thumbnail 
+  
+  // get the nid
+  // load the node based on the nid
+  // get the current files attached to this node.
+  // search for all non-pdf files
+  $field_course_materials = $form_state['node']['field_course_materials'];
+  $file_properties = array();
+  foreach($field_course_materials as $key => $file_widget_settings) {
+    if(is_array($file_widget_settings)) {
+      $file_properties[] = $file_widget_settings;
+    }
+  }
+  $filepaths = array();
+  foreach($file_properties as $uploaded_file) {
+    if(isset($uploaded_file['filepath'])) {
+      // give me the items that don't end in .pdf
+      preg_match("/^(\w*\/)+(.*[^\.pdf])$/i", $uploaded_file['filepath'], $matches);
+      $filepaths[] = $matches[0];
+    }
+  }
+  if(!empty($filepaths)) {
+    // convert all to pdf
+    array_walk(array_filter($filepaths), '_convert_to_pdf');
+  }
+}
+
+/**
+ * @deprecated
+ */ 
+function _convert_to_pdf($filepath, $index) {
+  $file_directory_path = file_directory_path();
+  //shell_exec("export HOME=/tmp; libreoffice --headless --invisible --norestore --convert-to pdf --outdir $file_directory_path $filepath");
+  // if conversion is successful, replace the original file with the newly
+  // converted one
+
+}
+
+/**
+ * @todo Replace this with hook_node_$op in Drupal 8
+ */ 
+function acm_school_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
+  
+  if($node->type == 'course_content') {
+    switch($op) {
+      case 'view':
+        $node->content['body']['#value'] = views_embed_view('course_materials', 'file_thumbnail_pane');
+        return $node;
+      // presave:
+      // get the non-pdf files
+
+      // insert
+      // invoke hook_file_insert to replace the recent saved file(using fid) with the converted one
+      // and remove the non-pdf file from the file system.
+
+      // view
+    }
+  }
+
+}
+
+/**
+ * Implementation of hook_theme_registry_alter().
+ *
+ * Adds support for preprocessors for each defined view.
+ * A module with the name myModule can implement a preprocessor for a view
+ * called 'myView' by implementing the following preprocessor
+ * (note the double underscore):
+ *
+ * myModule_preprocess_views_view__myView(&$vars) { ... }
+ *
+ * @param array $theme_registry
+ *   The theme registry array passed by reference.
+ *
+ * @return void
+ */
+function acm_school_theme_registry_alter(&$theme_registry) {
+  // get a list of modules
+  $modules = module_list();
+
+  $views = views_get_all_views();
+
+  foreach($modules as $module) {
+    foreach($views as $view_name => $view) {
+      $theme_registry_key = 'views_view__' . $view_name;
+      $function = $module . '_preprocess_' . $theme_registry_key;
+      if (!function_exists($function)) {
+        continue;
+      }
+
+      if (!isset($theme_registry[$theme_registry_key])) {
+        $theme_registry[$theme_registry_key] = array();
+      }
+
+      // add in the defaults
+      $theme_registry[$theme_registry_key] += $theme_registry['views_view'];
+
+      // add the preprocessor function
+      $theme_registry[$theme_registry_key]['preprocess functions'][] = $function;
+    }
+  }
+}
+
+function acm_school_preprocess_views_view__course_materials(&$variables) {
+  //dsm($variables);
+  //dsm(views_get_view('course_materials'));
+  //dsm(content_fields('field_course_materials'));
+}
+
+/**
+ * Implements hook_views_pre_render
+ */ 
+function acm_school_views_pre_render(&$view) {
+  //dsm($view);
+}
+
+/**
+ * Implements template_process_content_field
+ */
+function acm_school_preprocess_content_field(&$variables) {
+  dsm($variables);
+}
+
+/**
+ * School settings callback
+ * 
+ * @todo Move to acm_school.admin.inc 
+ */
+function acm_school_settings_callback() {
+  
+  foreach(module_implements('school_settings') as $module) {
+    $school_settings = module_invoke($module, 'school_settings');
+  }
+  
+  if(!empty($school_settings)) {
+    foreach($school_settings['configure'] as $key => $setting){
+      if(isset($setting['callback url'])){
+        $school_settings['configure'][$key]['theme'] = l($setting['title'], $setting['callback url']);
+      }
+    }
+  }
+  return theme('school_settings', $school_settings);
+}
+
+/**
+ * Admission settings menu callback at admin/settings/school/admission
+ */
+function acm_school_settings_admission_callback($type) {
+  if(isset($type)){
+    foreach(module_implements('admission_settings') as $module) {
+      $admission_settings = module_invoke($module, 'admission_settings', $type);
+    }
+  }
+  
+  if(!empty($admission_settings)) {
+    foreach($admission_settings['admission'] as $key => $setting){
+      if(isset($setting['callback url'])){
+        $admission_settings['admission'][$key]['theme'] = l($setting['title'], $setting['callback url']);
+      }
+    }
+  }
+  
+  return theme('school_settings', $admission_settings);
+}
+
+/**
+ * Admission view menu callback.
+ *
+ * @todo This callback needs a clear definition.
+ *
+ * @see acm_school_menu
+ */ 
+function acm_school_admission_view_callback() {
+  
+  foreach(module_implements('admission') as $module) {
+    $admission_view = module_invoke($module, 'admission');
+  }
+  $output = views_embed_view($admission_view->name, 'default');
+  $items = array('Configure', 'View applications');
+  
+  return theme('admission_view', $output, $items);
+}
+
+/**
+ * Theme function to render admission view landing page
+ * 
+ * @param type $view
+ * @param type $items 
+ */
+function theme_admission_view($view, $items = NULL) {
+  $output = "<div class='span9'>$view</div>";
+  $output .= "<div class='span3 pull-right'>$items</div>";
+  return $output;
+}
+
+/**
+ * View faculty menu callback 
+ */
+function acm_school_faculty_view($faculty) {
+  foreach(module_implements('faculty') as $module) {
+    $faculty_view = module_invoke($module, 'faculty');
+  }
+  
+  // faculty info content
+  
+  // 
+  $output = views_embed_view($faculty_view->name, 'default');
+  $items = array();
+  
+  //return theme('faculty_view', $output, $items);
+  return theme('faculty', $output, $items);
+}
+
+function theme_faculty_view($view, $items = NULL) {
+  $output = "<div class='span9'>$view</div>";
+  $output .= "<div class='span3 pull-right'>$items</div>";
+  return $output;
+}
+
+/**
+ * View department menu callback
+ */
+function acm_school_department_view() {
+  foreach(module_implements('department') as $module) {
+    $department_view = module_invoke($module, 'department');
+  }
+  $output = views_embed_view($department_view->name, 'default');
+  $items = array();
+  
+  return theme('department_view', $faculty);
+}
+
+/**
+ * Renders department views display
+ */ 
+function theme_department_view($view, $items = NULL) {
+  $output = "<div class='span9'>$view</div>";
+  $output .= "<div class='span3 pull-right'>$items</div>";
+  return $output;
+}
+
+/**
+ * View grade menu callback
+ */
+function acm_school_grade_view() {
+  foreach(module_implements('grade') as $module) {
+    $grade_view = module_invoke($module, 'grade');
+  }
+  $output = views_embed_view($grade_view->name, 'default');
+  $items = array();
+  
+  return theme('grade_view', $output, $items);
+}
+
+/**
+ * Renders grade views display
+ */ 
+function theme_grade_view($view, $items = NULL) {
+  $output = "<div class='span9'>$view</div>";
+  $output .= "<div class='span3 pull-right'>$items</div>";
+  return $output;
+}
+
+/**
+ * View fees menu callback
+ */
+function acm_school_fees_view_callback() {
+  foreach(module_implements('fees') as $module) {
+    $fees = module_invoke($module, 'fees');
+  }
+  
+  return theme('fees_view', $fees);
+}
+
+/**
+ * faculty settings admin menu callback
+ * @return type 
+ */
+function acm_school_settings_faculty_callback($type) {
+  if(isset($type)) {
+    foreach(module_implements('faculty_settings') as $module) {
+      $faculty_settings = module_invoke($module, 'faculty_settings', $type);
+    }
+  }
+  
+  if(!empty($faculty_settings)) {
+    foreach($faculty_settings['faculty'] as $key => $setting){
+      if(isset($setting['callback url'])){
+        $faculty_settings['faculty'][$key]['theme'] = l($setting['title'], $setting['callback url']);
+      }
+    }
+  }
+  
+  return theme('school_settings', $faculty_settings);
+}
+
+function acm_school_settings_department_callback($type) {
+  if(isset($type)) {
+    foreach(module_implements('department_settings') as $module) {
+      $department_settings = module_invoke($module, 'department_settings', $type);
+    }
+  }
+  
+  if(!empty($department_settings)) {
+    foreach($department_settings['dept'] as $key => $setting){
+      if(isset($setting['callback url'])){
+        $department_settings['dept'][$key]['theme'] = l($setting['title'], $setting['callback url']);
+      }
+    }
+  }
+  
+  return theme('school_settings', $department_settings);
+}
+
+/**
+ * Menu callback for programme settings
+ *
+ * @see hook_menu
+ */
+function acm_school_settings_programme_callback($type) {
+  if(isset($type)) {
+    foreach(module_implements('programme_settings') as $module) {
+      $programme_settings = module_invoke($module, 'programme_settings', $type);
+    }
+  }
+  
+  if(!empty($programme_settings)) {
+    foreach($programme_settings['prog'] as $key => $setting){
+      if(isset($setting['callback url'])){
+        $programme_settings['prog'][$key]['theme'] = l($setting['title'], $setting['callback url']);
+      }
+    }
+  }
+  
+  return theme('school_settings', $programme_settings);
+}
+
+/**
+ * Menu callback to configure course such as add course to a
+ * programme 
+ * 
+ * @deprecated Adding courses is handled within department settings
+ * @see acm_school_settings_department_callback
+ */
+function acm_school_configure_course_callback($type) {
+  if(isset($type)) {
+    foreach(module_implements('') as $module) {
+      $course_configure = module_invoke($module, 'course_configure', $type);
+    }
+  }
+  return theme('school_settings', $course_configure);
+}
+
+/**
+ * Menu callback to configure a single course. E.g configure CA, marks,
+ * maximum exam marks
+ * 
+ * @param type $course
+ * @return type 
+ */
+function acm_school_settings_course_callback($course) {
+  if(isset($course)) {
+    foreach(module_implements('course_settings') as $module) {
+      $course_settings = module_invoke($module, 'course_settings', $course);
+    }
+  }
+  
+  return theme('school_settings', $course_settings);
+}
+
+function acm_school_settings_grade_callback($type) {
+  if(isset($type)) {
+    foreach(module_implements('grade_settings') as $module) {
+      $grade_settings = module_invoke($module, 'grade_settings', $type);
+    }
+  }
+  
+  if(!empty($grade_settings)) {
+    foreach($grade_settings['grade'] as $key => $setting){
+      if(isset($setting['callback url'])){
+        $grade_settings['grade'][$key]['theme'] = l($setting['title'], $setting['callback url']);
+      }
+    }
+  }
+  
+  return theme('school_settings', $grade_settings);
+}
+
+/**
+ *
+ * @return theme_fees_settings
+ */
+function acm_school_settings_fees_callback($type = NULL) {
+  if(!isset($type)) {
+    $view = views_embed_view('fees_item_list');
+    $fees_settings = theme('fees_item_list', $view);
+    return $fees_settings;
+  }
+  foreach(module_implements('fees_settings') as $module) {
+    $fees_settings = module_invoke($module, 'fees_settings', $type);
+  }
+  
+  if(!empty($fees_settings)) {
+    foreach($fees_settings['fees'] as $key => $setting){
+      if(isset($setting['callback url'])){
+        $fees_settings['fees'][$key]['theme'] = l($setting['title'], $setting['callback url']);
+      }
+    }
+  }
+  
+  return theme('school_settings', $fees_settings);
+}
+
+/**
+ * Menu callback to add/edit/configure Student score
+ *
+ */
+function acm_school_settings_score_callback($type) {
+  if(!isset($type)) {
+    //$view = views_embed_view('fees_item_list');
+    //$fees_settings = theme('fees_item_list', $view);
+    //return $fees_settings;
+  }
+  foreach(module_implements('score_settings') as $module) {
+    $score_settings = module_invoke($module, 'score_settings', $type);
+  }
+
+  if(!empty($score_settings)) {
+    if(isset($score_settings['score'])) {
+      foreach($score_settings['score'] as $key => $setting){
+        if(isset($setting['callback url'])){
+          $score_settings['score'][$key]['theme'] = l($setting['title'], $setting['callback url']);
+        }
+      }
+    }
+  }
+  
+  return theme('school_settings', $score_settings);
+
+}
+
+/**
+ * Displays a list of configured fees in the system.
+ */ 
+function theme_fees_item_list($view) {
+  $output = '<div>No fees setup exist. ' . l("Add", "admin/settings/school/fees/add") . '</div>';
+  return $output;
+}
+
+/**
+ * Implements hook_fees_settings 
+ */
+function acm_school_fees_settings($type) {
+  $settings['type'] = 'fees';
+  $settings['fees']['add'] = array(
+    'title' => 'Add fee item',
+    'callback url' => 'admin/settings/school/fees/add'
+  );
+  $settings['fees']['settings'] = array(
+    'title' => 'Global fees settings',
+    'callback url' => 'admin/settings/school/fees/settings'
+  );
+  if($type == 'add') {
+    drupal_set_title('Add fee item');
+    $settings['fees']['add_fees_form'] = drupal_get_form('acm_school_fees_add_form'); 
+  }
+  // Global fees settings.
+  if($type == 'settings') {
+    drupal_set_title('Global fees settings');
+    $settings['fees']['fees_settings_form'] = drupal_get_form('acm_school_fees_settings_form');
+  }
+  return $settings;
+}
+
+/**
+ * Form callback to add/edit a fee item
+ *
+ * @see acm_school_fees_settings
+ */ 
+function acm_school_fees_add_form(&$form_state) {
+  $form['#attributes'] = array('class' => 'form-horizontal');
+  $form['fee_item_name'] = array(
+    '#type' => 'textfield', // generate machine name - make sure it is unique
+    '#title' => t('Name'),
+    '#description' => t('Human readable name. For example, Tuition'),
+    '#default_value' => variable_get('fee_item_name', '')
+  );
+  $form['fee_item_type'] = array(
+    '#type' => 'select',
+    '#title' => t('Fee type'),
+    '#description' => t('Fee type'),
+    '#options' => module_invoke_all('fees_type'), // hook_fees_type - based on fees_type implemented by submodules. FeesType::type
+    '#default_value' => variable_get('fee_item_type', '')
+  );
+  $form['fee_item_description'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Description'),
+    '#description' => t('Describe this fee item'),
+    '#default_value' => variable_get('fee_item_description', '')
+  );
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => 'Save',
+    '#attributes' => array('class' => 'btn'),
+  );
+  return $form;
+}
+
+/**
+ * Form submit callback to add fees form.
+ *
+ * @see acm_school_fees_add_form
+ */ 
+function acm_school_fees_add_form_submit($form, &$form_state) {
+  
+}
+
+/**
+ * Form callback to configure global fees settings
+ *
+ * @see acm_school_fees_settings
+ */
+function acm_school_fees_settings_form(&$form_state) {
+
+  $form['#attributes'] = array('class' => 'form-horizontal');
+  $form['activate_second_instalment'] = array(
+    '#type' => 'select',
+    '#title' => t('Activate second instalment'),
+    '#default_value' => variable_get('activate_second_instalment', ''),
+    '#options' => array('No', 'Yes'),
+    '#description' => t('Whether to activate second instalment for fees payment'),
+  );
+  $form['late_registration_amount'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Late registration amount'),
+    '#default_value' => variable_get('late_registration_amount', ''),
+    '#description' => t('Amount a student should pay for registering late')
+  );
+  // @todo Introduce a date picker.
+  $form['late_registration_start_date'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Late registration start date'),
+    '#default_value' => variable_get('late_registration_start_date', ''),
+    '#description' => t('The start date for late registration.')
+  );
+  return system_settings_form($form);
+}
+
+/**
+ * Menu callback for admin/settings/school/fees/%/setup
+ * 
+ * @see acm_school_menu
+ * @param type $fee_item 
+ *  Is the machine readable name of Fee item name
+ * @param String $type
+ *  General or Program Specific. By not passing a value signifies General
+ *  Fee type
+ */
+function acm_school_settings_fees_setup_callback($fee_item, $type = NULL) {
+  // make sure $fee_item is a machine name represented in the url. Look for the
+  // passed $fee_item in FeeItem table. return FALSE if it's not there.
+  
+  if(isset($type)) {
+    // hook_fee_item_setup
+  }
+  foreach(module_implements('fee_item_setup') as $module) {
+    $fees_settings = module_invoke($module, 'fee_item_setup', $fee_item, $type);
+  }
+  
+  return theme('school_settings', $fees_settings);
+}
+
+function acm_school_fee_item_setup($fee_item, $type = NULL) {
+  $form[''] = array(
+    
+  );
+  return $form;
+}
+
+/**
+ * Form handler to setup general fee item 
+ */
+function acm_school_fee_item_setup_form(&$form_state) {
+  $form[''] = array(
+    
+  );
+  return $form;
+}
+
+/**
+ * Form handler to setup program specific fee item
+ */
+function acm_school_fee_item_program_setup_form(&$form_state) {
+
+  // @todo Add a setting to allow or disallow student course registration prior to fees Payment
+}
+
+/**
+ * Implements hook_fee_catalog_info 
+ * 
+ * A group that a particular fee belong to. Acadaman has the following built-in Fee catalog:
+ * 
+ * - Freshman 
+ * - Freshman local 
+ * - Freshman international 
+ * - Returning student (& spillover) 
+ * - Returning student local (& spillover) 
+ * - Returning student international (& spillover) 
+ * - Local 
+ * - Non-local (i.e from another state in the country) 
+ * - International
+ * 
+ * For each fee item, it must belong to at least one catalog 
+ * 
+ * @see FeeCatalog
+ */
+function acm_school_fee_catalog_info() {
+  
+}
+
+/**
+ * Implements hook_fee_instalment_type 
+ */
+function acm_school_fee_instalment_type() {
+  
+}
+
+/**
+ * Menu callback for student course registration page.
+ *
+ * @see acm_school_menu
+ */
+function acm_school_student_course_callback() {
+
+  // call school implementation of student_course
+  foreach(module_implements('student_course') as $module) {
+    $student_courses = module_invoke($module, 'student_course'); 
+  }
+  //views_get_view_result($student_application->name, 'default');
+  $output = views_embed_view($student_courses->name, $student_courses->display);
+  //dsm($output);
+  drupal_add_js(drupal_get_path('module', 'acm_school') . '/scripts/apps/school/studentcourse/studentcourse_source.js');
+  drupal_add_js(drupal_get_path('module', 'acm_school') . '/scripts/apps/school/studentcourse/main.js');
+  return theme('student_course', $output, NULL);
+  //return views_embed_view($student_application->name, 'default');
+}
+
+/**
+ * Load a profile per user role 
+ */
+function acm_school_profile_load($uid) {
+  global $user;
+  
+  if(!is_numeric($uid)) {
+    return FALSE;
+  }
+  // load the user object
+  $account = $user;
+  $account->uid = $uid;
+  
+  // load the profile based on uid
+  $result = db_query("SELECT * FROM {profile} WHERE uid = %d", $uid);
+  while($items = db_fetch_object($result)) { // simply unserialize(items);
+    $profile['uid'] = $items->uid;
+    $profile['firstname'] = $items->firstname;
+    $profile['lastname'] = $items->lastname;
+    $profile['email'] = $items->email;
+    $profile['address1'] = $items->address1;
+    $profile['address2'] = $items->address2;
+    $profile['gender'] = $items->gender;
+    $profile['dob'] = $items->dob;
+    $profile['nationality'] = $items->nationality;
+    $profile['state'] = $items->state;
+    $profile['city'] = $items->city;
+    $profile['lga'] = $items->lga;
+    $profile['postalcode'] = $items->postalcode;
+    $profile['maritalstatus'] = $items->maritalstatus;
+    $profile['phone'] = $items->phone;
+    $profile['religion'] = $items->religion;
+    $profile['picture'] = $items->picture;
+    $profile['signature'] = $items->signature;
+    $profile['acadamanid'] = $items->acadamanid;
+  }
+  
+  // add the profile object as a key in $user
+  if(!isset($account->profile)) {
+    $account->profile = $profile;
+  }
+  return $account;
+}
+
+/**
+ * $profile is gotten from uri due to the call of acm_school_profile_load
+ * @param type $profile 
+ */
+function acm_school_profile_edit($profile) {
+  $profile->profile['profile_state'] = 'edit';
+  return acm_school_acm_studentprofile($profile->profile);
+  // return acm_school_acm_{role}profile($profile);
+}
+
+/**
+ * Determines if more than one module is enabled and installed
+ * 
+ * @param type $modules
+ * @return boolean 
+ */
+function acm_school_module_exists($modules) {
+  $exists = FALSE;
+  foreach($modules as $module) {
+    if(module_exists($module)) {
+      $exists = TRUE;
+    }
+  }
+  return $exists;
+}
+
+function acm_school_faculty_load($fid) {
+  $faculty = new Faculty();
+  // load the profile based on uid
+  $result = db_query("SELECT * FROM {faculty} WHERE id = %d", $fid);
+  while($items = db_fetch_object($result)) {
+    //$faculty->id = $items->id;
+    $faculty->setName($items->name);
+    //$faculty->machine_name = $items->machine_name;
+    $faculty->setDescription($items->description);
+    $faculty->setFacultyCode($items->facultycode);
+    $faculty->setEmailSubdomain($items->emailsubdomain);
+  }
+  $fact['id'] = $fid;
+  $fact['name'] = $faculty->getName();
+  $fact['description'] = $faculty->getDescription();
+  $fact['facultycode'] = $faculty->getFacultyCode();
+  $fact['emailsubdomain'] = $faculty->getEmailSubdomain();
+  return $fact;
+}
+
+/**
+ * Load a programme from db
+ */
+function acm_school_programme_load($pid) {
+    $programme = new Programme();
+    $result = db_query("SELECT * FROM {academic_programme} WHERE id = %d", $pid);
+  while($items = db_fetch_object($result)) { // simply unserialize(items);
+    $programme->setName($items->name);
+    $programme->setDescription($items->description);
+    $programme->setAbbr($items->abbr);
+    $programme->setDepartment($items->academic_departmentid);
+    $programme->setDuration($items->duration);
+    $programme->setMaximumDuration($items->maximum_duration);
+    $programme->setType($items->type);
+    $programme->setMinimumCreditLoad($items->minimum_credit_load);
+  }
+    $prog['id'] = $pid;
+    $prog['name'] = $programme->getName();
+    $prog['abbr'] = $programme->getAbbr();
+    $prog['description'] = $programme->getDescription();
+    $prog['academic_departmentid'] = $programme->getDepartment();
+    $prog['duration'] = $programme->getDuration();
+    $prog['maximum_duration'] = $programme->getMaximumDuration();
+    $prog['type'] = $programme->getType();
+    $prog['minimum_credit_load'] = $programme->getMinimumCreditLoad();
+  return $prog;
+}
+
+/**
+ * Load a programme from db
+ */
+function acm_school_department_load($did) {
+    $department = new Department();
+    $result = db_query("SELECT * FROM {academic_department} WHERE id = %d", $did);
+  while($items = db_fetch_object($result)) { // simply unserialize(items);
+    $department->setName($items->name);
+    $department->setCode($items->code);
+    $department->setFaculty($items->facultyid);
+  }
+    $dept['id'] = $did;
+    $dept['name'] = $department->getName();
+    $dept['code'] = $department->getCode();
+    $dept['facultyid'] = $department->getFaculty();
+    
+    return $dept;
+}
+
+/**
+ * Load a course from db
+ */
+function acm_school_course_load($cid) {
+    $course = new Course();
+    $result = db_query("SELECT * FROM {academic_course} WHERE id = %d", $cid);
+  while($items = db_fetch_object($result)) { // simply unserialize(items);
+    $course->setTitle($items->title);
+    $course->setProgramme($items->programme);
+    $course->setDepartment($items->department);
+    $course->setCode($items->code);
+    $course->setDescription($items->description);
+    $course->setType($items->type);
+    $course->setCreditPoint($items->creditpoint);
+    $course->setPrerequisiteCodes($items->prerequisitecodes);
+    $course->setPrerequisites($items->prerequisites);
+    $course->setLevel($items->level);
+    $course->setSemester($items->semester);
+    $course->setSession($items->session);
+    $course->setLecturerInCharge($items->lecturerincharge);
+    $course->setNumberOfCAs($items->numberofcas);
+    $course->setCaApprovalMethod($items->caapprovalmethod);
+    $course->setTestScore($items->testscore);
+    $course->setMaxTestMark($items->maxtestmark);
+    $course->setExamScore($items->examscore);
+    $course->setMaxExamMark($items->maxexammark);
+  }
+    $course_arr['id'] = $cid;
+    $course_arr['title'] = $course->getTitle();
+    $course_arr['programme'] = $course->getProgramme();
+    $course_arr['code'] = $course->getCode();
+    $course_arr['description'] = $course->getDescription();
+    $course_arr['type'] = $course->getType();
+    $course_arr['creditpoint'] = $course->getCreditPoint();
+    $course_arr['prerequisitecodes'] = $course->getPrerequisiteCodes();
+    $course_arr['prerequisites'] = $course->getPrerequisites();
+    $course_arr['level'] = $course->getLevel();
+    $course_arr['semester'] = $course->getSemester();
+    $course_arr['session'] = $course->getSession();
+    $course_arr['lecturerincharge'] = $course->getLecturerInCharge();
+    $course_arr['numberofcas'] = $course->getNumberOfCAs();
+    $course_arr['caapprovalmethod'] = $course->isCaApprovalMethod();
+    $course_arr['testscore'] = $course->getTestScore();
+    $course_arr['maxtestmark'] = $course->getMaxTestMark();
+    $course_arr['examscore'] = $course->getExamScore();
+    $course_arr['maxexammark'] = $course->getMaxExamMark();
+
+    return $course_arr;
+}    
+
+function acm_school_score_load($sid) {
+  $score = new Score();
+  $result = db_query("SELECT * FROM {score} WHERE id = %d", $sid);
+  while($items = db_fetch_object($result)) { // simply unserialize(items);
+    $score->setUid($items->uid);
+    $score->setProgramme($items->programme);
+    $score->setCourse($items->course);
+    $score->setType($items->type);
+    $score->setIsLocked($items->islocked);
+    $score->setSemester($items->semester);
+    $score->setAcademicSession($items->academicsession);
+    $score->setOverall($items->overall);
+    $score->setScore($items->score);
+    $score->setCaScore($items->cascore);
+  }
+    // TODO: Relocate into a function.
+    $uid = $score->getUid();
+    $profile = acm_school_profile_load($uid);
+    $firstname = $profile->profile['firstname'];
+    $lastname = $profile->profile['lastname'];
+    $fullnames = array($uid => implode("  ", array($firstname, $lastname)));
+
+    $score_arr['id'] = $sid;
+    $score_arr['programme'] = $score->getProgramme();
+    $score_arr['course'] = $score->getCourse();
+    $score_arr['uid'] = $score->getUid();// turn into an array of key value
+    $score_arr['type'] = $score->getType();
+    $score_arr['islocked'] = $score->isIsLocked();
+    $score_arr['semester'] = $score->getSemester();
+    $score_arr['academicsession'] = $score->getAcademicSession();
+    $score_arr['overall'] = $score->getOverall();
+    $score_arr['exam_score'] = $score->getScore();
+    $score_arr['ca_score'] = $score->getCaScore();
+    
+    return $score_arr;
+  
+}
+
+/**
+ * Load a student grade from db
+ */
+function acm_school_grade() {
+
+}
+
+function acm_school_create_role($role) {
+  module_load_include('inc', 'user', 'user.admin');
+
+  if(!isset($role)) {
+    return FALSE;
+  }
+
+  $q = $_GET['q'];
+  $_GET['q'] = "";
+  $form_id = "user_admin_role";
+  $form_values = array();
+  $form_values['op'] = t('Add role');
+  $form_state = array();
+
+  if(is_array($role)) {
+    foreach($role as $key => $name) {
+      $form_values['name'] = $name;
+      $form_state['values'] = $form_values;
+      drupal_execute($form_id, $form_state);
+      $_GET['q'] = $q; 
+    }
+    return;
+  }
+  
+  $form_values["name"] = $role;
+  $form_state["values"] = $form_values;
+
+  drupal_execute($form_id, $form_state);
+  $_GET['q'] = $q; 
+}
+
+function acm_school_init() {
+  drupal_add_css(drupal_get_path('module', 'acm_school') .'/acm_school.css');
+  drupal_add_js(drupal_get_path('module', 'acm_school') .'/acm_school.js');
+  drupal_add_js(drupal_get_path('module', 'acm_school') .'/scripts/libs/underscore.js');
+  drupal_add_js(drupal_get_path('module', 'acm_school') .'/scripts/lib/jiverscripts/src/oo/class.js');
+  drupal_add_js(drupal_get_path('module', 'acm_school') .'/scripts/lib/jiverscripts/src/conc/next_tick.js');
+  drupal_add_js(drupal_get_path('module', 'acm_school') .'/scripts/lib/jiverscripts/src/conc/observable.js');
+  drupal_add_js(drupal_get_path('module', 'acm_school') .'/scripts/lib/jiverscripts/src/conc/promise.js');
+  drupal_add_js(drupal_get_path('module', 'acm_school') . '/scripts/jive/namespace.js');
+  drupal_add_js(drupal_get_path('module', 'acm_school') . '/scripts/jive/dispatcher.js');
+  drupal_add_js(drupal_get_path('module', 'acm_school') . '/scripts/jive/drupal_rest.js');
+  drupal_add_js(drupal_get_path('module', 'acm_school') . '/scripts/apps/shared/models/drupal_rest_service.js');
+  drupal_add_js(drupal_get_path('module', 'acm_school') . '/scripts/jquery/jquery.define.js');
+  drupal_add_js(drupal_get_path('module', 'acm_school') . '/scripts/jquery/jquery.message.js');
+  drupal_add_js(drupal_get_path('module', 'acm_school') . '/scripts/shared/display_utils.js');
+  //dsm(views_get_view('uni_grade_view'));
+
+//  module_load_include('inc', 'node', 'node.pages'); // required
+//    $node = array('type' => 'mytype');
+//    $form_state = array();
+//    $form_state['values']['title'] = 'someText2'; // node's title
+//    $form_state['values']['field_user']['uid']['uid'] = 955; // user reference. (Example: 1)
+//    $form_state['values']['field_value'][0]['value'] = 'someText'; // regular text field
+//    $form_state['values']['field_number'][0]['value'] = 10; // regular integer field
+//    $form_state['values']['field_checkbox']['value'] = 1; // on/off checkbox field
+//    $form_state['values']['op'] = t('Save'); // required value
+//    drupal_execute('mytype_node_form', $form_state, (object)$node);
+//    // you can probably configure the node-author in $form_state or $node,
+//    // but i'm doing it this way to demonstrate the use of $form_state['nid'].
+//    // the following lines aren't required, but otherwise the node-author will be "Anonymous" in this case.
+//    $node = node_load($form_state['nid']); // nid from the node that gets created is set in $form_state['nid'] after drupal_execute()
+//    $node->uid = 1; // set author to admin
+//    node_save($node); 
+}
+/**
+ * Process callback to add dependency to form items.
+ *
+ * Usage:
+ *
+ * On any form item, add
+ * - @code '#process' => 'acm_school_process_dependency' @endcode
+ * - @code '#dependency' => array('id-of-form-without-the-#' => array(list, of, values, that, make, this, gadget, visible)); @endcode
+ */
+function acm_school_process_dependency($element, $edit, &$form_state, &$form) {
+  return $element;
+}
+
+function acm_school_settings_validate_field($element, &$form_state) {
+  switch ($element['#name']) {
+    case 'faculty_name':
+      if (!preg_match('!^[a-z0-9_]+$!', $element['#value'])) {
+        form_error($element, t('The machine-readable name must contain only lowercase letters, numbers, and underscores.'));
+      }
+      break;
+    case 'dept_name':
+      if (!preg_match('!^[a-z0-9_]+$!', $element['#value'])) {
+        form_error($element, t('The machine-readable name must contain only lowercase letters, numbers, and underscores.'));
+      }
+      // If user is filling out the feature name for the first time and uses
+      // the name of an existing module throw an error.
+#      else if (empty($element['#default_value']) && features_get_info('module', $element['#value'])) {
+#        form_error($element, t('A module by the name @name already exists on your site. Please choose a different name.', array('@name' => $element['#value'])));
+#      }
+        break;
+    case 'programme_name':
+      if (!preg_match('!^[a-z0-9_]+$!', $element['#value'])) {
+        form_error($element, t('The machine-readable name must contain only lowercase letters, numbers, and underscores.'));
+      }
+      break;
+  }
+}
+
+function acm_school_get_users_in_a_role($rid) {
+    // user_roles
+
+    $result = db_query("SELECT uid FROM {users_roles} WHERE rid = %d", $rid);
+    $uids = array();
+    while($rid = db_fetch_object($result)) {
+        $uids[$rid->uid] = $rid->uid;
+    }
+    //return $rids;
+    // select name from users where uid
+
+    $role_uids = implode(', ', $uids);
+    $result = db_query("SELECT uid, firstname, lastname FROM {profile} WHERE uid IN ($role_uids)");
+    $profile = array();
+    while($item = db_fetch_object($result)) {
+        $profile[$item->uid] = $item->firstname . ' '. $item->lastname;
+    }
+    return $profile;
+}
+
+/**
+ * theme callback for student profile form add and edit
+ */ 
+function theme_student_profile_form($form) {
+    //$output = drupal_render($form['firstname']);
+    $output = drupal_render($form);
+    return $output;
+}
+
+/**
+ * Does the very standard things that must be done in any normal callback.
+ * Used by each callback in this example module.
+ */
+function acm_school_callback_helper() {
+  $form_state = array('storage' => NULL, 'submitted' => FALSE);
+  //$form_state = array('storage' => NULL, 'rebuild' => TRUE);
+  $form_build_id = $_POST['form_build_id'];
+  $form = form_get_cache($form_build_id, $form_state);
+  $args = $form['#parameters'];
+  $form_id = array_shift($args);
+  $form_state['post'] = $form['#post'] = $_POST;
+  // Enable the submit/validate handlers to determine whether AHAH-submittted.
+  $form_state['ahah_submission'] = TRUE;
+  $form['#programmed'] = $form['#redirect'] = FALSE;
+  drupal_process_form($form_id, $form, $form_state);
+  $form = drupal_rebuild_form($form_id, $form_state, $args, $form_build_id);
+  return $form;
+}
+
+/**
+ * Callback handler to handle programme selection in score form
+ *
+ * @see uni_school_score_form for example
+ */
+function score_programme_dropdown_callback() {
+
+	$form = acm_school_callback_helper();
+
+  $changed_elements = $form['programme_holder'];
+
+  // Prevent duplicate wrappers.
+  unset($changed_elements['#prefix'], $changed_elements['#suffix']);
+
+  //$output = theme('status_messages') . drupal_render($changed_elements);
+
+  $output = drupal_render($changed_elements);
+
+  drupal_json(array(
+    'status'   => TRUE,
+    'data'     => $output,
+  ));
+  exit();
+}
+
+/**
+ * Callback handler to handle programme selection in score form
+ *
+ * @see uni_school_score_form for example
+ */
+function score_course_dropdown_callback() {
+
+	$form = acm_school_callback_helper();
+
+  $changed_elements = $form['course_holder'];
+
+  // Prevent duplicate wrappers.
+  unset($changed_elements['#prefix'], $changed_elements['#suffix']);
+
+  //$output = theme('status_messages') . drupal_render($changed_elements);
+
+  $output = drupal_render($changed_elements);
+
+  drupal_json(array(
+    'status'   => TRUE,
+    'data'     => $output,
+  ));
+}
+
+/**
+ * Callback handler to handle programme selection in score form
+ *
+ * @see uni_school_score_form for example
+ */
+function grade_system_dropdown_callback() {
+
+	$form = acm_school_callback_helper();
+  $changed_elements = $form['grade_system_holder'];
+  // Prevent duplicate wrappers.
+  unset($changed_elements['#prefix'], $changed_elements['#suffix']);
+  $output = drupal_render($changed_elements);
+
+  drupal_json(array(
+    'status'   => TRUE,
+    'data'     => $output,
+  ));
+  exit();
+}
+
+function acm_school_score_autotextfields_callback() {
+  
+	$form = acm_school_callback_helper();
+
+  $changed_elements = $form['score'];
+
+  // Prevent duplicate wrappers.
+  unset($changed_elements['#prefix'], $changed_elements['#suffix']);
+
+  //$output = theme('status_messages') . drupal_render($changed_elements);
+
+  $output = drupal_render($changed_elements);
+
+  drupal_json(array(
+    'status'   => TRUE,
+    'data'     => $output,
+  ));
+  exit();
+}
+
+/**
+ * Ajax callback to student course register
+ *
+ * @see acm_school_menu
+ */
+function student_course_register_ajax() {
+  global $user;
+
+  // Check if the user is a student.
+  if (!in_array('Student', $user->roles)) {
+      //
+      return FALSE;
+  }
+  $uid = $user->uid;
+  
+  // @todo Validate that user has role of Student.
+
+  // as a prerequisite, use the filters to get the student_course
+
+  // get the post data and the query params (which are the filters)
+  //save or update into student_course
+  // for each of the courses, if course is registered, gray it out.
+  // the save or update request invokes a rest service, passing session, level
+  // and uid as filters and course id as data.
+  // Based on the filters, the service first checks if the user has a course
+  // registered that matches the filters. If yes, an update is made else, an
+  // insert is made.
+  //$filters = http_get_params;
+  //$student_courses = StudentCourse::get_student_courses($filters); 
+  //print drupal_json($HTTP_RAW_POST_DATA);
+  $posted_data = file_get_contents('php://input');
+  watchdog('student_course', file_get_contents('php://input'));
+  
+  if(!isset($posted_data)) {
+    watchdog('student_course', 'No data is posted');
+    return;
+  }
+  $posted_data_arr = json_decode($posted_data, true);
+
+  //watchdog('student_course', json_decode($_POST, true));
+  // given the courseid, get the totalcreditload from Courses.
+  //$courses = Course::getFilteredCourses($posted_student_courses); 
+  foreach($posted_data_arr as $key => $course) {
+    watchdog('student_course', 'Title is %title', $course['title']);
+    db_query("UPDATE {student_course} SET registered = %d, totalcreditload = %d, uid = %d WHERE academic_courseid = %d", COURSE_REGISTERED, $course['creditpoint'], $uid, $course['id']);
+  }
+  drupal_json($_POST);
+
+  // update the hidden div to give a feedback to the client
+  // drupal_add_js(); 
+  exit();
+}
+
+function acm_school_create_batch_course_content($course_id) {
+  watchdog('batch_course_create', 'Course id is %course_id', $course_id);
+  $batch = array(
+    'operations' => array(
+      //array('acm_school_batch_create_course_process', array(t('Course Introduction'), $course_id)),
+      //array('acm_school_batch_create_course_process', array(t('Course materials'), $course_id)),
+      //array('acm_school_batch_create_course_process', array(t('Course references'), $course_id)),
+      array('acm_school_batch_create_course_process', array())
+      ),
+    'finished' => 'acm_school_batch_create_course_finished',
+    'title' => t('Creating new course'),
+    'init_message' => t('Course content batch is starting.'),
+    'progress_message' => t('Processed @current out of @total.'),
+    'error_message' => t('Course content Batch has encountered an error.'),
+    //'file' => drupal_get_path('module', 'batch_example') . '/batch_example.inc',
+  );
+  batch_set($batch);   
+}
+
+function acm_school_batch_create_course_process(&$context) {
+  $context['sandbox']['progress'] = 0;
+  $context['sandbox']['max'] = 3;
+  module_load_include('inc', 'node', 'node.pages');
+  $results = db_fetch_object(db_query("SELECT MAX(id) as id FROM {academic_course}"));
+  //watchdog('batch_course_process', 'Field value is', $field);
+
+  /*$node = array('type' => 'course_content');
+  $node_form_state = array();
+  $node_form_state['values']['title'] = $options['title'];
+  $node_form_state['values']['field_course_ref_id'][0]['value'] = $options['field_course_ref_id'];
+  $node_form_state['values']['op'] = t('Save');
+  drupal_execute('course_content_node_form', $node_form_state, (object)$node);
+  $nid = $node_form_state['nid'];
+  $node = node_load($nid);
+  $node->uid = 1;
+  node_save($node);
+  $context['results'][] = check_plain($options['title']);
+  if($options['title'] == 'Course Introduction') {
+    $context['sandbox']['progress'] = 1;
+  }
+  if($options['title'] == 'Course materials') {
+    $context['sandbox']['progress'] = 2;
+  }
+  if($options['title'] == 'Course references') {
+    $context['sandbox']['progress'] = 3;
+  }*/
+
+  $node = array('type' => 'course_content');
+  $node_form_state = array();
+  $node_form_state['values']['title'] = t('Course Introduction');
+  $node_form_state['values']['field_course_ref_id'][0]['value'] = $results->id;
+  $node_form_state['values']['op'] = t('Save');
+  drupal_execute('course_content_node_form', $node_form_state, (object)$node);
+  $nid = $node_form_state['nid'];
+  $node = node_load($nid);
+  $node->uid = 1;
+  node_save($node);
+  $context['results'][] = check_plain(t('Course Introduction'));
+    
+  $node = array('type' => 'course_content');
+  $node_form_state = array();
+  $node_form_state['values']['title'] = t('Course materials');
+  $node_form_state['values']['field_course_ref_id'][0]['value'] = $results->id;
+  $node_form_state['values']['op'] = t('Save');
+  drupal_execute('course_content_node_form', $node_form_state, (object)$node);
+  $nid = $node_form_state['nid'];
+  $node = node_load($nid);
+  $node->uid = 1;
+  node_save($node);
+  $context['results'][] = check_plain(t('Course materials'));
+  $context['message'] = t('Now processing %node', array('%node' => t('Course materials')));
+  
+  $node = array('type' => 'course_content');
+  $node_form_state = array();
+  $node_form_state['values']['title'] = t('Course references');
+  $node_form_state['values']['field_course_ref_id'][0]['value'] = $results->id;
+  $node_form_state['values']['op'] = t('Save');
+  drupal_execute('course_content_node_form', $node_form_state, (object)$node);
+  $nid = $node_form_state['nid'];
+  $node = node_load($nid);
+  $node->uid = 1;
+  node_save($node);
+  $context['results'][] = check_plain(t('Course references'));
+
+  $context['message'] = t('Now processing %node', array('%node' => t('Course references')));
+
+  // Until $context['finished'] returns true, this will continue to iterate
+  /*if ($context['sandbox']['progress'] != $context['sandbox']['max']) {
+    $context['finished'] = $context['sandbox']['progress'] / $context['sandbox']['max'];
+  }*/
+  $context['finished'] = 1;
+}
+
+function acm_school_batch_create_course_finished($success, $results, $operations) {
+  if ($success) {
+    $message = count($results) .' processed.';
+    $message .= theme('item_list', $results);
+    drupal_set_message($message);
+  }
+  else {
+    // An error occurred.
+    // $operations contains the operations that remained unprocessed.
+    $error_operation = reset($operations);
+    $message = t('An error occurred while processing %error_operation with arguments: @arguments', array('%error_operation' => $error_operation[0], '@arguments' => print_r($error_operation[1], TRUE)));
+    drupal_set_message($message, 'error');
+  }
+}
+
+/**
+ * Implements hook_grade_update_score
+ *
+ * Invoked when a score is updated.
+ */
+function acm_school_grade_update_score($score) {
+  // TODO: Recompute totalscore
+  $cascore = $score['ca_score'];
+  $examscore = $score['exam_score'];
+  $totalscore = $cascore + $examscore;
+  // load the grade by score uid and course
+  $result = db_query("SELECT * FROM {grade} WHERE uid = %d AND course = %d", $score['uid'], $score['course']);
+  $grade = array();
+  while($lgrade = db_fetch_object($result)) {
+    $grade['studentnumber'] = $lgrade->studentnumber;
+    $grade['creditload'] = $lgrade->creditload;
+    $grade['dropped'] = $lgrade->dropped;
+    $grade['approved'] = $lgrade->approved;
+    $grade['submitted'] = $lgrade->submitted;
+  }   
+  $grade_system_type = variable_get('grade_system_type', '');
+  // TODO: If score has changed, recompute grade & gradepoint before updating db.
+  switch($grade_system_type) {
+    case 'Local country':
+      $country = variable_get('country_grade_system', '');
+      // include file
+      module_load_include('inc', 'acm_school', 'acm_school.grade');
+      // invoke function
+      $grade = grade_grade_by_country($totalscore, $country);
+      $gradepoint = grade_gpe_by_country($grade);
+      $dropped = FALSE;
+      $creditload = $grade['creditload'];
+      $submittedby = $score['submittedby'];
+      // Update grade using the loaded score
+      db_query("UPDATE {grade} SET exam_score_id = %d, test_score_id = %d, uid = %d, course = %d, studentnumber = '%s', currentgpa = %d, totalscore = %d, grade = '%s', gradepoint = %d, dropped = %d, creditload = %d, approved = %d, submittedby = %d, submitted = %d WHERE uid = %d AND course = %d", $score['exam_score'], $score['ca_score'], $score['uid'], $score['course'], $score['studentnumber'], NULL, $totalscore, $grade, $gradepoint,$grade['dropped'], $creditload,
+        $grade['approved'], $score['submittedby'], $grade['submitted'], $score['uid'], $score['course']);
+  }
+}
+
+/**
+ * Implements hook_grade_new_score
+ *
+ * Invoked when a new score is added.
+ */
+function acm_school_grade_new_score($score) {
+  $cascore = !isset($score['ca_score']) ? 0 : $score['ca_score'];
+  $examscore = !isset($score['exam_score']) ? 0 : $score['exam_score'];
+  $totalscore = $cascore + $examscore;
+  $grade_system_type = variable_get('grade_system_type', '');
+  foreach(module_implements('student_number') as $module) { 
+    $student_number = module_invoke($module, 'student_number');
+  }
+  $course = acm_school_course_load($score['course']);
+  switch($grade_system_type) {
+    case 'Local country':
+      $country = variable_get('country_grade_system', '');
+      //$func = "grade_system_$country";
+      //$grade_system = $func();
+      // include file
+      module_load_include('inc', 'acm_school', 'acm_school.grade');
+      // invoke function
+      $grade =  grade_grade_by_country($score, $country);
+      $gradepoint = grade_gpe_by_country($grade);
+      // $dropped = isCourseDropped(uid, course);
+      $dropped = FALSE;
+      $creditload = $course['creditpoint'];
+      $submittedby = $score['submittedby'];
+      // Create new grade
+      db_query("INSERT INTO {grade} (exam_score_id, test_score_id, uid, course, matriculationnumber, currentgpa, totalscore, grade, gradepoint, dropped, creditload, approved, submittedby, submitted) VALUES (%d, %d, %d, %d, '%s', %d, %d, '%s', %d, %d, %d, %d, %d, %d)", $score['exam_score'], $score['ca_score'], $score['uid'], $score['course'], $student_number, NULL, $totalscore, $grade, $gradepoint, $dropped, $creditload, FALSE, $submittedby, FALSE); // approved and submitted is FALSE on creation
+      // select grade from {grade_system_country} where country = variable_get('', '');
+      break;
+    case 'WES':
+      // return grade_grade($score);
+      break;
+  }
+  //$cascore = !isset($score['ca_score']) ? 0 : $score['ca_score'];
+  //$examscore = !isset($score['exam_score']) ? 0 : $score['exam_score'];
+  //$totalscore = $cascore + $examscore;
+  // $grade = getGrade($totalscore);
+  //$currentgpa = ''; // Grade::computeGpa($uid); Not relevant
+  //$student_number = ''; // TODO: use hook_student_number instead of matric number
+  // $gradepoint = computeGradePoint($grade, $creditload);
+  // $dropped = isCourseDropped(uid, course);
+  // $creditload = getCreditLoadByCourse(course)
+  //$submittedby = $score['submittedby'];
+  // Create new grade
+  //db_query("INSERT INTO {grade} (exam_score_id, test_score_id, uid, course, matriculationnumber, currentgpa, totalscore, grade, gradepoint, dropped, creditload, approved, submittedby, submitted) VALUES (%d, %d, %d, %d, '%s', %d, %d, '%s', %d, %d, %d, %d, %d, %d)", $score['exam_score'], $score['ca_score'], $score['uid'], $score['course'], $student_number, NULL, $totalscore, $grade, $gradepoint, $dropped, $creditload, FALSE, $submittedby, FALSE); // approved and submitted is FALSE on creation
+}
+
+function acm_school_grade_letter($score) {
+  $grade_system_type = module_invoke('', 'grade_system_type');
+  switch($grade_system_type) {
+    case 'Local country':
+      $country = variable_get('country_grade_system', '');
+      //$func = "grade_system_$country";
+      //$grade_system = $func();
+      // include file
+      // invoke function
+      // return grade_grade_by_country($score, $country);
+      // select grade from {grade_system_country} where country = variable_get('', '');
+      break;
+    case 'WES':
+      // return grade_grade($score);
+      break;
+  }
+}
+
+/**
+ * Implements hook_student_number
+ *
+ * This is called matric number in high school
+ */
+function acm_school_student_number() {
+
+}
+
+/**
+ * Implements hook_cron
+ */
+function acm_school_cron() {
+  // TODO Automatically create a grade for scores created.
+}
+
+/**
+ * Implementation of hook_views_api(), register view API information so include files can be loaded
+ */
+function acm_school_views_api() {
+  return array(
+    'api' => 2,
+    //'path' => drupal_get_path('module', 'acm_school') . '/views',
+    'path' => drupal_get_path('module', 'acm_school') . '/includes',
+    'template path' => drupal_get_path('module', 'acm_school') . '/templates/views',
+  );
+}
+
+/**
+ * Implements hook_views_pre_view
+ */
+function acm_school_views_pre_view(&$view, &$display_id, &$args) {
+}
+
+/**
+ * Implements hook_views_post_render
+ */
+function acm_school_views_post_render(&$view) {
+  if($view->name == "course") {
+    $args = $view->args;
+    // Load the current course
+    $course = acm_school_course_load($args[0]);
+    $view->build_info['title'] = $course['title'];
+  }
+}
