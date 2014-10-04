@@ -1,354 +1,400 @@
 <?php 
 /*
- * Render student application profile items 
- * hook_acm_student_application()
+ * Implements hook_menu
  */
-function college_school_acm_student_application(){
-  global $user;
-  switch($_GET['edit']) {
-  case 'app':
-	  $profile = acm_school_profile_load($user->uid);
-	  return drupal_get_form('acm_school_student_profile_form', (array)$profile->profile, NULL);
-  }
-  switch($_GET['app']) {
-  case 'sponsor':
-      drupal_set_title('Sponsor');
-      $studentApplication = views_get_view('uni_student_application_view');
-      $studentApplication->display = 'sponsor';
-      break;
-    case 'course':
-		drupal_set_title('Course');
-        $studentApplication = views_get_view('uni_student_application_view');
-        $studentApplication->display = 'course';
-        break;
-    case 'nextofkin':
-        drupal_set_title('Next of Kin');
-        $studentApplication = views_get_view('uni_student_application_view');
-        $studentApplication->display = 'nextofkin';
-        break;
-    default:
-        $studentApplication = views_get_view('uni_student_application_view');
-        $studentApplication->display = 'default';
-        break;
-  }
-  return $studentApplication;
-}
-
-/*
- * hook represents a label of items that should be configured for student application
- * profile view
- * hook_acm_student_application_items()
- */ 
-function college_school_acm_student_application_items(){
+function college_school_menu() {
   $items = array();
-  $items['sponsor'] = array(
-    'data' => l('Sponsor Information', 'application/sponsor')
+  // menu is only available if this module is enabled
+  $items['admission/apply/course'] = array(
+    'title' => t('Application to [School name]'),
+    'description' => t('Student application for admission to a school'),
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('college_school_admission_course_form'),
+    'access arguments' => array(''), // edit admission form 
+    'access callback' => TRUE 
   );
-  $items['course'] = array(
-    'data' => l('Course Information', 'application/course')
+  $items['admission/apply/sponsor'] = array(
+    'title' => t('Application to [School name]'),
+    'description' => t('Student application for admission to a school'),
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('college_school_admission_sponsors_form'),//function callback
+    'access arguments' => array(''), // edit admission form 
+    'access callback' => TRUE // remove if access arguments is set
+  );
+  $items['admission/apply/nextofkin'] = array(
+    'title' => t('Application to [School name]'),
+    'description' => t('Student application for admission to a school'),
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('college_school_admission_nextofkin_form'),
+    'access arguments' => array(''), // edit admission form
+    'access callback' => TRUE // remove if access arguments is set
+  ); 
+  $items['admission/apply/health'] = array(
+    'title' => t('Application to [School name]'),
+    'description' => t('Student application for admission to a school'),
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('college_school_admission_health_form'), // function callback
+    'access arguments' => array(''), // edit admission form
+    'access callback' => TRUE // remove if access arguments is set
+  );
+  $items['admission/apply/examresults'] = array(
+    'title' => t('Application to [School name]'),
+    'description' => t('Student application for admission to a school'),
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('college_school_admission_examresults_form'),
+    'access arguments' => array(''), // edit admission form
+    'access callback' => TRUE // remove if access arguments is set
+  ); 
+  // edit a programme
+  $items['admin/settings/school/programme/%acm_school_programme/edit'] = array(
+  
+    'title' => t('Configure Programme'),
+    'description' => t('School programme settings'),
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('college_school_programme_form', 4),
+    'access arguments' => array('administer programme settings'),
+    'type' => MENU_CALLBACK,
+    'load arguments' => array(4)
+  );
+  // edit a department
+  $items['admin/settings/school/department/%acm_school_department/edit'] = array(
+  
+    'title' => t('Configure Department'),
+    'description' => t('School department settings'),
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('college_school_faculty_dept_form', 4),
+    'access arguments' => array('administer department settings'),
+    'type' => MENU_CALLBACK,
+    'load arguments' => array(4)
 );
+  // edit a course
+  $items['admin/settings/school/course/%acm_school_course/edit'] = array(
+  
+    'title' => t('Configure Course'),
+    'description' => t('School course settings'),
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('college_school_addcourse_form', 4),
+    'access arguments' => array('administer course settings'),
+    'type' => MENU_CALLBACK,
+    'load arguments' => array(4)
+  );
+  // edit a faculty
+  $items['admin/settings/school/faculty/%acm_school_faculty/edit'] = array(
+  
+    'title' => t('Configure Faculty'),
+    'description' => t('School faculty settings'),
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('college_school_faculty_form', 4),
+    'access arguments' => array('administer faculty settings'),
+    'type' => MENU_CALLBACK,
+    'load arguments' => array(4)
+  );
+  // edit a student grade
+  $items['admin/settings/school/grade/%acm_school_grade/edit'] = array(
+    'title' => t('Edit Grade'),
+    'description' => t('Edit student grade'),
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('college_school_grade_form', 4),
+    'type' => MENU_CALLBACK,
+    'load arguments' => array(4)
+  );
+  // edit a student score
+  $items['admin/settings/school/score/%acm_school_score/edit'] = array(
+    'title' => t('Edit Score'),
+    'description' => t('Edit a student score'),
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('college_school_score_form', 4),
+    'access arguments' => array('score a student'),
+    'type' => MENU_CALLBACK,
+    'load arguments' => array(4)
+  );
   return $items;
 }
-
-/*
- * Defines the next step after admission application
- * hook_admission_application_info()
+/**
+ * Implements hook_acm_roles 
+ * 
+ * Defines default roles needed in a college for school module
  */
-function college_school_admission_application_info(){
-	$application_form = array(
-    'course' => array(
-      'title' => 'course',
-      'form_id' => 'uni_school_admission_course_form'
-    ),
-    'sponsor' => array(
-      'title' => 'sponsor',
-      'form_id' => 'uni_school_admission_sponsors_form'
-    ),
-    'nextofkin' => array(
-      'title' => 'nextofkin',
-      'form_id' => 'uni_school_admission_nextofkin_form'
-    ),
-    'health' => array(
-      'title' => 'health',
-      'form_id' => 'uni_school_admission_health_form'
-    ),
+function college_school_acm_roles() {
+  return array('Lecturer', 'HOD', 'Principal');
+}
+/**
+ * Implements hook_acm_roles_perm
+ * 
+ * Assigns permission(s) to role(s) 
+ */
+function college_school_acm_roles_perm() {
+  return array(
+    'Principal' => 'administer school settings',
+    'Principal' => 'view admission',
+    'Principal' => 'administer faculty settings',
+    'Principal' => 'administer department settings',
+    'Principal' => 'administer grade settings',
+    'Principal' => 'administer course settings',
+    'Principal' => 'administer programme settings',
+    'Principal' => 'view student application',
+    'Principal' => 'view student applications', // view all student applications
+    'Principal' => 'setup school',
   );
-  return $application_form;
 }
-
-/*
- * This hook defines the setting for school admission 
- * hook_admission_settings($type)
- */
-function college_school_admission_settings($type){
- if($type == 'status') {
-    $settings['admission']['admission_status_form'] = drupal_get_form('uni_school_admission_settings_form');
-  }
-  return $settings;
-
-}
-
-/*
- * setting for structure of each Academic module
- * hook_school_settings()
+/**
+ * Implements hook_school_settings()
+ *
  */
 function college_school_school_settings(){
- $settings['type'] = 'configure';
-  
-  $settings['configure']['admission'] = array(
-    'title' => t('Set admission status'),
-    'callback url' => t('admin/settings/school/admission/status')
-  );
-  $settings['configure']['users'] = array(
-    'title' => 'Configure users',
-    'callback url' => 'admin/settings/school/users'
-  );
-  $settings['configure']['fees'] = array(
-    'title' => 'Setup Fees',
-    'callback url' => 'admin/settings/school/fees'
-  );
-  $settings['configure']['dorm'] = array(
-    'title' => 'Configure dormitory allocation',
-    'callback url' => 'admin/settings/school/dormitory'
-  );
-  $settings['configure']['faculty'] = array(
-    'title' => 'Add faculty',
-    'callback url' => 'admin/settings/school/faculty/add'
-  );
-  $settings['configure']['department'] = array(
-    'title' => 'Add department',
-    'callback url' => 'admin/settings/school/department/add'
-  );
-  $settings['configure']['grade'] = array(
-    'title' => 'Configure grading system',
-    'callback url' => 'admin/settings/school/grade/gradingsystem'
-  );
-  
-  $settings['configure']['school_settings'] = drupal_get_form('uni_school_school_settings_form');
-  
-  return $settings;
+	$settings['type'] = 'configure';
+	$settings['configure']['admission'] = array(
+		'title' => t('Set admission status'),
+		'callback url' => t('admin/settings/school/admission/status'),
+	);
+	$settings['configure']['users'] = array(
+		'title' => t('Configure users'),
+		'callback url' => t('admin/settings/school/users'),
+	);
+	$settings['configure']['fees'] = array(
+		'title' => t('Setup Fees'),
+		'callback url' => t('admin/settings/school/fees'),
+	);
+	$settings['configure']['dorm'] = array(
+		'title' => t('Configure dormitory allocation'),
+		'callback url' => t('admin/settings/school/dormitory'),
+	);
+	$settings['configure']['faculty'] = array(
+		'title' => t('Add faculty'),
+		'callback url' => t('admin/settings/school/faculty/add'),
+	);
+	$settings['configure']['department'] = array(
+		'title' => t('Add department'),
+		'callback url' => t('admin/settings/school/department/add'),
+	);
+	$settings['configure']['grade'] = array(
+		'title' => t('Configure grading system'),
+		'callback url' => t('admin/settings/school/grade/gradingsystem')
+	);
+	
+	$settings['configure']['school_settings'] = 
+	drupal_get_form('college_school_school_settings_form');
+	
+	return $settings;	
 }
-/*
- * view of student application made into a school
- * hook_admission_application_list()
+/**
+ * Implements hook_admission_settings()
+ *
  */
-function college_school_admission_application_list(){
- $admission_view = views_get_view('uni_admission_view');
-  return $admission_view;
+function college_school_admission_settings($type){
+	$settings['type'] = 'admission',
+	$settings['admission']['configure'] = array(
+		'title' => t('Configure'),
+		'callback url' => t('admin/settings/school'),
+	);
+	$settings['admission']['view_applications'] = array(
+		'title' => t('View applications'),
+		'callback url' => t('admission/applications'),
+	);
+	
+	if($type == 'status'){
+	$settings['admission']['admission_status_form'] = 
+	drupal_get_form('college_school_admission_settings_form');
+	}
+	
+	return $settings;
 }
-/*
- * Describe the academic level of a school
- * hook_academic_level()
- */
-function college_school_academic_level(){
 
- return drupal_map_assoc(array(100, 200, 300, 400, 500, 600, 700));
-}
-/*
- * display all the faculties in a school
- * hook_faculty()
- */
-function college_school_faculty(){
+// admission form call
+function college_school_admission_settings_form(&$form_state){
+	$form['#attributes'] = array('class' => 'form-horizontal');
+	$form['admission_status'] = array(
+		'#type' => 'select',
+		'#title' => t('Admission status'),
+		'#default_value' => variable_get('admission_status', ''),
+		'#options' => t('Open', 'Closed'),
+		'#description' => t('Admission status'),
+	);
+	$form['academic_session'] = array(
+		'#type' => 'textfield',
+		'#title' => t('Academic session'),
+		'#default_value' => variable_get('academic_session', ''),
+		'#description' => t('Set current academic session'),	
+	);
+	$semester = array(
+		variable_get('first_semester_name', ''),
+		variable_get('second_semester_name', ''),
+	);
+	$form['admission_semester'] = array(
+		'#type' => 'select',
+		'#title' => t('Semester'),
+		'#options' => $semester,
+		'#default_value' => variable_get('admission_semester', ''),
+		'#description' => t('Admission current semester'),
+	);
+	$form['#submit'][] = 'college_school_admission_settings_form_submit';
+	return system_settings_form($form);
+} 
 
+function college_school_admission_settings_form_submit($form,&$form_state){
+	$session = $form_state['values']['academic_session'];
+	AcademicSession::addAcademicSession($session);
 }
-/*
- * Display all the departments in a school
- * hook_department()
- */
-function college_school_department(){
 
+function college_school_school_settings_form(){
+	$form['#attributes'] = array('class'=>'form-horizontal');
+	$form['first_semester_name'] = array(
+		'#type' => 'textfield',
+		'#title' => t('First semester name'),
+		'#default_value' => variable_get('first_semester_name', ''),
+		'#required' => TRUE,
+	);
+	$form['second_semester_name'] = array(
+		'#type' => 'textfield',
+		'#title' => t('Second semester name'),
+		'#default_value' => variable_get('second_semester_name', ''),
+		'#required' => TRUE,
+	);
+	$form['#submit'][] = 'college_school_school_settings_form_submit';
+	return system_settings_form($form);
+}
+
+function college_school_school_settings_form_submit($form,&$form_state){
+ 
 }
 /*
- * Display all student grade in a school
- * hook_grade()
+ *implements hook_term_type()
+ *
  */
-function college_school_grade(){
-  $grade_view = views_get_view('uni_grade_view');
-  return $grade_view;
+function college_school_term_type(){
+	return variable_set('term_type', 'Semester');
 }
 /*
- * Configure faculty settings for a school
- * hook_faculty_settings()
+ * implements hook_faculty_settings()
+ *
  */
 function college_school_faculty_settings($type){
-$settings['type'] = 'faculty';
-  $settings['faculty']['add'] = array(
-    'title' => t('Add'),
-    'callback url' => 'admin/settings/school/faculty/add'
-  );
-  $settings['faculty']['add dept'] = array(
-    'title' => 'Add department',
-    'callback url' => 'admin/settings/school/department/add'
-  );
-  $settings['faculty']['view'] = array(
-    'title' => 'View faculty',
-    'callback url' => 'faculty'
-  );
-  
-  if($type == 'add') {
-    $settings['faculty']['add_faculty_form'] = drupal_get_form('uni_school_faculty_form');
-  }
-  if($type == 'add_dept') {
-    $settings['faculty']['add_dept_form'] = drupal_get_form('uni_school_faculty_dept_form');
-  }
-  return $settings;
-}
-/*
- * Configure department settings for a school
- * hook_department_settings()
- */
-function college_school_department_settings($type){
-	 $settings['type'] = 'department';
-  $settings['dept']['add'] = array(
-    'title' => t('Add'),
-    'callback url' => 'admin/settings/school/department/add'
-  );
-  // add course to a department
-  $settings['dept']['add course'] = array(
-    'title' => 'Add Course',
-    'callback url' => 'admin/settings/school/department/addcourse'
-  );
-  $settings['dept']['grade point'] = array(
-    'title' => 'Set grade point',
-    'callback url' => 'admin/settings/school/grade/dept_gradepoint'
-  );
-  
-  if($type == 'add') {
-    $settings['dept']['add_dept_form'] = drupal_get_form('uni_school_faculty_dept_form'); //uni_school_add_dept_form()
-  }
-  if($type == 'addcourse') {
-    $settings['dept']['addcourse_form'] = drupal_get_form('uni_school_addcourse_form');
-  }
-  
-  return $settings;
-
-}
-/*
- * Configure all the course setting for a school
- * hook_course_settings()
- */
-function college_school_course_settings(){
- $form['#attributes'] = array('class' => 'form-horizontal');
-  $form['number_of_cas'] = array(
-    '#type' => 'select',
-    '#title' => t('Number of CAs'),
-    '#options' => array(1,2,3,4),
-    '#default_value' => variable_get('number_of_cas', (int)''),
-  );
-  $form['ca_approval_method'] = array(
-    '#type' => 'select',
-    '#title' => t('CA approval method'),
-    '#options' => array('Approved along with exams'),
-    '#default_value' => variable_get('ca_approval_method', ''),
-  );
-  $form['ca_maximum_mark'] = array(
-    '#type' => 'textfield',
-    '#title' => t('CA maximum mark'),
-    '#default_value' => variable_get('ca_maximum_mark', (int)''),
-  );
-  $form['exam_maximum_mark'] = array(
-    '#type' => 'textfield',
-    '#title' => t('Exam maximum mark'),
-    '#default_value' => variable_get('exam_maximum_mark', (int)'')
-  );
-  return system_settings_form($form);
-}
-/*
- * Configure programme settings for a school
- * hook_programme_settings()
- */
-function college_school_programme_settings($type){
-	$settings['type'] = 'programme';
-  $settings['prog']['add'] = array(
-    'title' => t('Add'),
-    'callback url' => 'admin/settings/school/programme/add'
-  );
-  if($type == 'add') {
-    $settings['prog']['add_prog_form'] = drupal_get_form('uni_school_programme_form');
-  }
-  
-  return $settings;
-}
-/*
- * Configure all the grade settings for a school
- * hook_grade_settings()
- */
-function college_school_grade_settings($type){
-$settings['type'] = 'grade';
-  $settings['grade']['configure'] = array(
-    'title' => t('Configure grading system'),
-    'callback url' => 'admin/settings/school/grade/gradingsystem'
-  );
-  // set global grading point
-  $settings['grade']['grade point'] = array(
-    'title' => 'Set grade point',
-    'callback url' => 'admin/settings/school/grade/gradepoint'
-  );
-  // set grading point for a specific department
-  // A staff in medicine department should be able to contact the IT
-  // staff (Acadaman authorized user) to set medicine department
-  // grade point to 7
-  $settings['grade']['department grade point'] = array(
-    'title' => 'Set department grade point',
-    'callback url' => 'admin/settings/school/grade/dept_gradepoint'
-  );
-  $settings['grade']['grade a student'] = array(
-    'title' => 'Grade a student',
-    'callback url' => 'admin/settings/school/grade/add'
-  );
-  $settings['grade']['score a student'] = array(
-    'title' => 'Score a student',
-    'callback url' => 'admin/settings/school/score/add'
-  );
-  if($type == 'gradingsystem') {
-    $settings['grade']['gradingsystem_form'] = drupal_get_form('uni_school_gradingsystem_settings_form');
-  }
-  if($type == 'gradepoint') {
-    $settings['grade']['gradepoint_form'] = drupal_get_form('uni_school_gradepoint_settings_form'); 
-  }
-  if($type == 'dept_gradepoint') {
-    $settings['grade']['dept_gradepoint_form'] = drupal_get_form('uni_school_dept_gradepoint_settings_form');
-  }
-  if($type == 'add') {
-    $settings['grade']['grade_form'] = drupal_get_form('uni_school_grade_form');
-  }
-  
-  return $settings;
-}
-/*
- * Configured all the score settings for a school
- * hook_score_settings()
- */
-function college_school_score_settings($type){
-$settings['type'] = 'score';
-  if($type == 'add') {
-    $settings['score']['score_form'] = drupal_get_form('uni_school_score_form');
-  }
-  return $settings;
-
-}
-/*
- * Display fee catalog of a school
- * hook_fees_catalog()
- */
-function college_school_fees_catalog(){
-return array('General', 'Program Specific');
+	$settings['type'] = 'faculty';
+	$settings['faculty']['add'] = array(
+		'#title' => t('Add faculty'),
+		'#callback url' => t('admin/settings/school/faculty/add'),
+	);
+	$settings['faculty']['add_dept'] = array(
+		'#title' => t('Add department'),
+		'#callback url' => t('admin/settings/school/department/add'),
+	);
+	$settings['faculty']['view'] = array(
+		'#title' => t('View faculty'),
+		'#callback url' => t('faculty'),
+	);
+	if($type == 'add'){
+		$settings['faculty']['add_faculty_form'] = 
+		drupal_get_form('college_school_faculty_form');
+	}
+	if($type == 'add_dept'){
+		$settings['faculty']['add_dept_form'] = 
+		drupal_get_form('college_school_faculty_dept_form');
+	}
+	return $settings;
 }
 
 /*
- * Display fee catalog of a school
- * hook_setup_tasks()
- */
-function college_school_setup_tasks(){
-  if($_GET['step'] == 'setup') {
-    $step = 'add-faculty';
-    $output = drupal_get_form('uni_school_setup_faculty_form');
-    variable_set('setup_step', 'faculty');
-  }
-  if($_GET['step'] == 'course'){
-    $step = 'add-course';
-    $output = drupal_get_form('uni_school_setup_course_form');
-    variable_set('setup_step', 'course');
-  }
-  return $output;
+ * Faculty add and edit form
+ *
+ */ 
+function college_school_faculty_form(&$form_state, $faculty = NULL, $edit= NULL){
+	$edit = (empty($form_state['values']))? (array)$faculty : $form_state['values'];
+	if($edit){
+		drupal_set_title('Edit faculty');
+	}
+	else{
+		drupal_set_title('Add faculty');
+	}
+	$form['#attributes'] = array('class' => 'form-horizontal');
+	$form['name'] = array(
+		'#type' => 'textfield',
+		'#title' => t('Name'),
+		'#default_value' => $edit['name'],
+		'#required' => TRUE,
+		'#attributes' => array('class' => 'faculty-name'), 
+	);
+	$form['machine_name'] = array(
+		'#type' => 'textfield',
+		'#title' => t('Machine-readable name'),
+		'#description' => t('Example: social_science').'<br/>' .t('May only contain lowercase letters, number and underscores.<strong>Try to avoid conflicts with the names of existing modules</strong>'),
+		'#required' => TRUE,
+		'#default_value' => $edit['machine_name'],
+		'#attributes' => array('class' => 'faculty-name-machine'),
+		'#element_validate' => array('acm_school_settings_validate_field'),
+	);
+	if(isset($edit)){
+		$form['machine_name']['#value'] = $edit['name'];
+		$form['machine_name']['#disabled'] = TRUE;
+		$form['machine_name']['#attributes'] = array();
+	}
+	$form['description'] = array(
+		'#type' => 'textfield',
+		'#title' => t('Description'),
+		'#default_value' => $edit['description'],
+	);
+	$form['facultycode'] = array(
+		'#type' => 'textfield',
+		'#title' => t('Faculty code'),
+		'#default_value' => $edit['facultycode'],
+		'#required' => TRUE,
+	);
+	$form['emailsubdomain'] = array(
+		'#type' => 'textfield',
+		'#title' => t('Email subdomain'),
+		'#default_value' => $edit['emailsubdomain'],
+	);
+	$form['submit'] = array(
+		'#type' => 'submit',
+		'#value' => isset($faculty) ? 'Update':'Save',
+		'#attributes' => array('class' => 'btn'),
+	);
+	$form['_faculty'] = array(
+		'#type' => 'value',
+		'#value' => $edit,
+	);
+	if(!isset($faculty)){
+		$form['created'] = array('#type' => 'value','#value' => time());
+	}
+	else{
+		$form['updated'] = array('#type' => 'value', '#value' => time());
+		$form['_loaded'] = array('#type' => 'value', '#value' => $faculty);
+	}
+	return $form;
+}
+function college_school_faculty_form_validate($form, &$form_state){
+	$faculty = $form_state['values']['_faculty'];
+	$faculty_name = $form_state['values']['name'];
+	$faculty_code = $form_state['values']['facultycode'];
+	$fields = drupal_schema_fields_sql('faculty');
+	$op = $form_state['values']['op'];
+	if($op != 'Update'){
+		if(in_array($faculty_name, Faculty::listFaculty($fields))){
+			form_error($form['name'],t('Faculty', @name already exist', array('@name'=> $faculty_name)));
+		}
+		if(in_array($faculty_code, Faculty::listFaculty($fields))){
+			form_error($form['code'], t('Faculty code', @code already exist', array('@code' => $faculty_code)));
+		}
+	}
+}
+
+function college_school_faculty_form_submit($form, &$form_state){
+	$faculty = $form_state['values']['_faculty'];
+	$loaded = $form_state['values']['_loaded'];
+	$faculty_table = 'faculty';
+	$success = FALSE;
+	
+	if(!empty($faculty)){
+		db_query("UPDATE {faculty} SET name = '%s', facultycode = '%s', description = '%s', emailsubdomain = '%s', updated = %d WHERE id = %d", $form_state['values']['name'], $form_state['values']['facultycode'], $form_state['values']['description'], $form_state['values']['emailsubdomain'], $form_state['values']['updated'], $loaded['id']);
+		$success = TRUE;
+		if($success){
+			drupal_set_message('Update completed successfully');
+			return;
+		}
+	}
+
+	drupal_write_record($faculty_table, $form_state['values']);
+	$success = TRUE;
+	if($success){
+		drupal_set_message('Faculty created successfully');
+	}
 }
