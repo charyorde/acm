@@ -398,3 +398,1812 @@ function college_school_faculty_form_submit($form, &$form_state){
 		drupal_set_message('Faculty created successfully');
 	}
 }
+/**
+ * Faculty department add and edit form
+ */
+function college_school_faculty_dept_form(&$form_state, $dept = NULL, $edit = NULL){
+	$edit = (empty($form_state['values'])) ? (array)$dept : $form_state['values'];
+	
+	if($edit){
+		drupal_set_title('Edit Department');
+	}
+	else{
+		drupal_set_title('Add Department');
+	}
+	
+	$form['#attributes'] = array('class' => 'form-horizontal');
+	$form['facultyid'] = array(
+		'#type' => 'select',
+		'#title' => t('Faculty'),
+		'#options' => Faculty::listFaculty('name', 'id'),
+		'#default_value' => $edit['facultyid'],
+		'#required' => TRUE
+		),
+	$form['name'] = array(
+		'#type' => 'textfield',
+		'#title' => t('Name'),
+		'#default_value' => $edit['name'],
+		'#required' => TRUE,
+		'#attributes' => array('class' => 'dept-name'),
+	);
+	$form['code'] = array(
+		'#type' => 'textfield',
+		'#title' => t('Department code'),
+		'#default_value' => $edit['code'],
+		'#required' => TRUE
+	);
+	$form['submit'] = array(
+		'#type' => 'submit',
+		'#value' => isset($dept) ? 'Update' : 'Save',
+		'#attributes' => array('class' => 'btn'),
+	);
+	$form['_department'] = array('#type' => 'value', '#value' => $edit);
+	  if(!isset($dept)) {
+		  $form['created'] = array('#type' => 'value', '#value' => time());
+	  }else {
+		  $form['updated'] = array('#type' => 'value', '#value' => time());
+		  $form['_loaded'] = array('#type' => 'value', '#value' => $dept);
+	  }
+	return $form;
+}
+/**
+ * Validate Add department form
+ */
+function college_school_faculty_dept_form_validate($form, &$form_state) {
+	$department = $form_state['values']['_department'];
+    $department_name = $form_state['values']['name'];
+    $department_code = $form_state['values']['code'];
+    $fields = drupal_schema_fields_sql('academic_department');
+
+    $op = $form_state['values']['op'];
+	if($op != 'Update') {
+        // does department name exist?
+        if(in_array($department_name, Department::listDepartments($fields))) {
+            form_error($form['name'], t('The department, @name already exist', array('@name' => $department_name)));
+        }
+        // does department_code exist?
+        if(in_array($department_code, Department::listDepartments($fields))) {
+            form_error($form['code'], t('The department code, @code already exist', array('@code' => $department_code)));
+        }
+    }
+}
+function college_school_faculty_dept_form_submit($form, &$form_state) {
+    $department = $form_state['values']['_department'];
+    $loaded = $form_state['values']['_loaded'];
+	$department_table = 'academic_department';
+	$success = FALSE;
+  
+	if(!empty($department)) {
+      db_query("UPDATE {academic_department} SET name = '%s', code ='%s', facultyid = %d, updated = %d WHERE id = %d", $form_state['values']['name'], $form_state['values']['code'], $form_state['values']['facultyid'], $form_state['values']['updated'], $loaded['id']);
+    $success = TRUE;
+    if($success) {
+      drupal_set_message('Update completed successfully');
+      return;
+    }
+  }
+  
+  drupal_write_record($department_table, $form_state['values']);
+  $success = TRUE;
+  if($success) {
+    drupal_set_message('Department created successfully');
+  }
+}
+/**
+ * Implements hook_department_settings()
+ */
+function college_school_department_settings($type){
+	$settings['type'] = 'department';
+	$settings['dept']['add'] = array(
+		'title' => t('Add'),
+		'callback url' => 'admin/settings/school/department/add'
+	);
+	// add course to a department
+	$settings['dept']['add course'] = array(
+		'title' => t('Add Course'),
+		'callback url' => 'admin/settings/school/department/addcourse'
+	);
+	$settings['dept']['grade point'] = array(
+		'title' => t('Set grade point'),
+		'callback url' => 'admin/settings/school/grade/dept_gradepoint'
+	);
+	if($type == 'add'){
+		$settings['dept']['add_dept_form'] = drupal_get_form('college_school_faculty_dept_form');
+	}
+	if($type == 'addcourse'){
+		$settings['dept']['addcourse_form'] = drupal_get_form('college_school_addcourse_form');
+	}
+	return $settings;
+}
+function college_school_programme_settings($type){
+	$settings['type'] = 'programme';
+	$settings['prog']['add'] = array(
+		'title' => t('Add'),
+		'callback url' => 'admin/settings/school/programme/add'
+	);
+	if($type == 'add'){
+		$settings['prog']['add_prog_form'] = drupal_get_form('college_school_programme_form');
+	}
+	return $settings;
+}
+function college_school_programme_form(&$form_state, $programme = NULL, $edit = NULL){
+	$edit = (empty($form_state['values'])) ? array($programme) : $form_state['values'];
+	
+	if($edit){
+		drupal_set_title('Edit Programme');
+	}
+	else{
+		drupal_set_title('Add Programme');
+	}
+	$form['#attributes'] = array(class => 'form-horizontal');
+	$form['name'] = array(
+		'#type' => 'textfield',
+		'#title' => t('Programme'),
+		'#description' => t('The programme name'),
+		'#default_value' => $edit['name'],
+		'#required' => TRUE
+	);
+	$form['description'] = array(
+		'#type' => 'textfield',
+		'#title' => t('Description'),
+		'#default_value' => $edit['description'],
+	);
+	$form['abbr'] = array(
+		'#type' => 'textfield',
+		'#title' => t('Programme code'),
+		'#description' => t('Programme code or abbreviation'),
+		'#default_value' => $edit['abbr'],
+		'#required' => TRUE
+	);
+	$form['academic_departmentid'] = array(
+		'#type' => 'select',
+		'#title' => t('Department'),
+		'#description' => t('(Optional) The department this programme belong to. For example, Economics programme belongs to department of Economics'),
+		'#options' => Department::listDepartmentsByIds(),
+		'#default_value' => $edit['academic_departmentid'],
+		'#required' => TRUE
+	);
+	$form['duration'] = array(
+		'#type' => 'textfield',
+		'#title' => t('Duration'),
+		'#description' => t('Duration of the programme'),
+		'#default_value' => $edit['duration'],
+		'#required' => TRUE
+	);
+	$form['maximum_duration'] = array(
+		'#type' => 'textfield',
+		'#title' => t('Maximum duration'),
+		'#description' => t('The maximum duration of a student can use for this course'),
+		'#default_value' => $edit['maximum_duration'],
+		'#required' => TRUE
+	);
+	$form['type'] = array(
+		'#type' => 'select',
+		'#title' => t('Programme type'),
+		'#description' => t('Programme study type'),
+		'#options' => StudyType::listStudyType(),
+		'#default_value' => $edit['type'],
+		'#required' => TRUE
+	);
+	$form['minimum_credit_load'] = array(
+		'#type' => 'textfield',
+		'#title' => t('Minimum credit load'),
+		'#description' => t('Minimum credit load to graduate'),
+		'#default_value' => $edit['minimum_credit_load'],
+		'#required' => TRUE
+	);
+
+	$form['submit'] = array(
+		'#type' => 'submit',
+		'#value' => isset($programme) ? 'Update' : 'Save',
+		'#attributes' => array('class' => 'btn'),
+	);
+  
+	$form['_programme'] = array('#type' => 'value', '#value' => $edit);
+	$form['created'] = array('#type' => 'value', '#value' => time());
+	if(isset($programme)) {
+		$form['state'] = array('#type' => 'value', '#value' => 'update');
+		$form['updated'] = array('#type' => 'value', '#value' => time());
+		$form['_loaded'] = array('#type' => 'value', '#value' => $programme);
+	}
+    return $form;
+}
+function college_school_programme_form_validate($form, &$form_state) {
+
+    $programme = $form_state['values']['_programme'];
+    $programme_name = $form_state['values']['name'];
+    $programme_abbr = $form_state['values']['abbr'];
+    $fields = drupal_schema_fields_sql('academic_programme');
+    $op = $form_state['values']['op'];
+    if($op != 'Update') {
+        // does programme name exist?
+        if(in_array($programme_name, Programme::listProgrammes($fields))) {
+            form_error($form['name'], t('The programme @name already exist', array('@name' => $programme_name)));
+        }
+        // does programme code exist?
+        if(in_array($programme_abbr, Programme::listProgrammes($fields))) {
+            form_error($form['abbr'], t('The programme code @name already exist.', array('@name' => $programme_abbr)));
+        }
+    }
+}
+function college_school_programme_form_submit($form, &$form_state) {
+
+	$programme = $form_state['values']['_programme'];
+	$programme_table = 'academic_programme';
+	$loaded = $form_state['values']['_loaded'];
+	$op = $form_state['values']['op'];
+
+	$success = FALSE;
+
+	//if(!empty($programme)) {
+	if($op == 'Update') {
+		db_query("UPDATE {academic_programme} SET name = '%s', academic_departmentid = %d, description ='%s', abbr = '%s', duration = %d, maximum_duration = %d, type = '%s', minimum_credit_load = %d, updated = %d WHERE id = %d", $form_state['values']['name'], $form_state['values']['academic_departmentid'], $form_state['values']['description'], $form_state['values']['abbr'], $form_state['values']['duration'],
+		  $form_state['values']['maximum_duration'], $form_state['values']['type'], $form_state['values']['minimum_credit_load'], $form_state['values']['updated'], $loaded['id']);
+	  
+		$success = TRUE;
+		if($success) {
+			drupal_set_message('Update completed successfully');
+			return;
+		}
+		drupal_set_message('An error occurred while updating Programme');
+		return FALSE;
+	}
+
+	drupal_write_record($programme_table, $form_state['values']);
+	$success = TRUE;
+	if($success) {
+	drupal_set_message('Programme created successfully');
+	}
+}
+function college_school_student_application_table_info(){
+	$table['course_info'] = array(
+		'primary_key' => 'id',
+	);
+	return $table;
+}
+
+/**
+ * Course form to save or edit a course for a department and programme
+ * 
+ * A course can be under a programme and also taught in a specific 
+ * department
+ * 
+ * @param type $form_state
+ * @param type $edit
+ * @param type $dept 
+ */
+
+function college_school_addcourse_form(&$form_state, $course = NULL, $edit = NULL){
+	$edit = (empty($form_state['values'])) ? (array) $course : $form_state['values'];
+	
+	if($edit){
+		drupal_set_title('Edit course');
+	}
+	else{
+		drupal_set_title('Add course');
+	}
+	
+	$form['#attributes'] = array('class' => 'form-horizontal');
+	$form['title'] = array(
+		'#type' => 'textfield',
+		'#title' => t('Course title'),
+		'#description' => t('The course title'),
+		'#default_value' => $edit['title'],
+		'#required' => TRUE
+	);
+	$form['programme'] = array(
+		'#type' => 'select',
+		'#title' => t('Programme'),
+		'#description' => t('The programme this course belongs to'),
+		'#options' => Programme::listProgrammes(array('id','name'), 'id'),
+		'#default_value' => $edit['programme'],
+		'#required' => TRUE
+	);
+	$level = module_invoke('college_school', 'academic_level');
+	$form['level'] = array(
+		'#type' => 'select',
+		'#title' => t('Academic level'),
+		'#options' => $level,
+		'#default_value' => $edit['level'],
+		'#required' => TRUE
+	);
+	$semester = drupal_map_assoc(array(
+		variable_get('first_semester_name', ''),
+		variable_get('second_semester_name', '')
+	));
+	// semester
+	$form['semester'] = array(
+		'#type' => 'select',
+		'#title' => t('Academic Term'),
+		'#description' => t('Course term or semester'),
+		//'#options' => AcademicSemester::listAcademicSemesters(),
+		'#options' => $semester,
+		'#default_value' => $edit['semester'],
+		'#required' => TRUE
+	);
+	// course code
+	$form['code'] = array(
+		'#type' => 'textfield',
+		'#title' => t('Course code'),
+		'#description' => t('The course code'),
+		'#default_value' => $edit['code'],
+		'#required' => TRUE
+	);
+	// course type
+	$form['type'] = array(
+		'#type' => 'select',
+		'#title' => t('Course type'),
+		'#description' => t('Core, required or elective'),
+		'#options' => drupal_map_assoc(array('Core', 'Required', 'Elective')), // core, required or elective
+		'#default_value' => $edit['type'],
+		'#required' => TRUE
+	);
+	// credit point
+	$form['creditpoint'] = array(
+		'#type' => 'select',
+		'#title' => t('Credit point'),
+		'#description' => t('The applicable credit for the course. 3 points, 5 points etc'),
+		'#default_value' => $edit['creditpoint'],
+		'#options' => drupal_map_assoc(array(1,2,3,4,5)),
+		'#required' => TRUE
+	);
+	// academic session
+	$form['session'] = array(
+		'#type' => 'select',
+		'#title' => t('Academic session'),
+		'#description' => t('The academic session this course is available for'),
+		'#options' => AcademicSession::listAcademicSession(),
+		'#default_value' => $edit['session'],
+		'#required' => TRUE
+	);
+	// lecturer
+	$lecturers = acm_school_get_users_in_a_role(37);
+	$form['lecturerincharge'] = array(
+		'#type' => 'select',// separate by a comma
+		'#title' => t('Course lecturer'),
+		'#description' => t('Course assigned to a lecturer'),
+		'#options' => $lecturers, // a list of lecturers in the school
+		'#default_value' => $edit['lecturerincharge'],
+		'#required' => TRUE
+	);
+	// department
+	$form['academic_departmentid'] = array(
+		'#type' => 'select',
+		'#title' => t('Department'),
+		'#description' => t('The department the course belong to'),
+		'#options' => Department::listDepartmentsByIds(),
+		'#default_value' => $edit['academic_departmentid'],
+		'#required' => TRUE
+	);
+	// course prerequisites
+	$form['prerequisites'] = array(
+		'#type' => 'textfield', // seperat with a comma
+		'#title' => t('Course prerequisites'),
+		'#description' => t('Courses this course depend on to have been taken. Please separate each item with a comma. E.g Maths for Economics, Finance'),
+		'#default_value' => $edit['prerequisites']
+	);
+	$form['prerequisitecodes'] = array(
+		'#type' => 'textfield',
+		'#title' => t('Course prerequisite codes'),
+		'#description' => t('Course codes this course depend on to have been taken. Please separate each item with a comma. E.g ECO 101, ECO 203'),
+		'#default_value' => $edit['prerequisitecodes']
+	);
+	$form['numberofcas'] = array(
+		'#type' => 'texfield',
+		'#title' => t('Course title'),
+		'#description' => t('A setting to configure total number of CA(continuous assessment) for this course'),
+		'#default_value' => $edit['numberofcas']
+	);
+	$form['caapprovalmethod'] = array(
+		'#type' => 'select',
+		'#title' => t('CA approval method'),
+		'#description' => t('A setting to configure continuous assessment approval method.'),
+		'#default_value' => $edit['caapprovalmethod'],
+		'#options' => drupal_map_assoc(array('Approved along with exams', 'Approved individually'))
+	);
+	$form['test_score_id'] = array(
+		'#type' => 'textfield',
+		'#title' => t('Test score'),
+		'#description' => t('This course test score'),
+		'#default_value' => $edit['test_score_id']
+	);
+	$form['maxtestmark'] = array(
+		'#type' => 'textfield',
+		'#title' => t('Maximum test mark'),
+		'#description' => t('A test score maximum mark. For example, 10 is the maximum mark for a test score of 5/10'),
+		'#default_value' => $edit['maxtestmark']
+	);
+	$form['exam_score_id'] = array(
+		'#type' => 'textfield',
+		'#title' => t('Exam score'),
+		'#description' => t('This course exam score'),
+		'#default_value' => $edit['exam_score_id']
+	);
+	$form['maxexammark'] = array(
+		'#type' => 'textfield',
+		'#title' => t('Maximum exam mark'),
+		'#description' => t('An exam score maximum mark. For example, 100 is the maximum mark for an exam score of 50/100'),
+		'#default_value' => $edit['maxexammark']
+	);
+	$form['submit'] = array(
+		'#type' => 'submit',
+		'#value' => isset($course) ? 'Update' :  'Save',
+		'#attributes' => array('class' => 'btn'),
+	);
+  
+	$form['_course'] = array('#type' => 'value', '#value' => $edit);
+	if(!isset($course)) {
+		$form['created'] = array('#type' => 'value', '#value' => time());
+	} else {
+		$form['updated'] = array('#type' => 'value', '#value' => time());
+		$form['_loaded'] = array('#type' => 'value', '#value' => $course);
+	}
+  return $form;
+}
+ 
+function college_school_addcourse_form_submit($form, &$form_state){
+	$course = $form_state['values']['_course'];
+	$loaded = $form_state['values']['_loaded'];
+	
+	$course_table = 'academic_course';
+	$success = FALSE;
+	if(!empty(course)){
+		db_query("UPDATE {academic_course} SET title = '%s', programme = %d, academic_departmentid = %d, code = '%s', description = %d, creditpoint = %d, type = '%s', prerequisitecodes = '%s', prerequisites = '%s', level = '%s', semester = '%s', session = '%s', lecturerincharge = '%s', numberofcas = %d, caapprovalmethod = '%s', test_score_id = %d, maxtestmark = %d, exam_score_id = %d, maxexammark = %d, updated = %d WHERE id = %d", $form_state['values']['title'], $form_state['values']['programme'],
+        $form_state['values']['academic_departmentid'], $form_state['values']['code'], $form_state['values']['description'], $form_state['values']['creditpoint'], $form_state['values']['type'], $form_state['values']['prerequisitecodes'], $form_state['values']['prerequisites'], $form_state['values']['level'], $form_state['values']['semester'],
+        $form_state['values']['session'], $form_state['values']['lecturerincharge'],
+        $form_state['values']['numberofcas'], $form_state['values']['caapprovalmethod'], $form_state['values']['test_score_id'], $form_state['values']['maxtestmark'], $form_state['values']['exam_score_id'], $form_state['values']['maxexammark'], $form_state['values']['updated'], $loaded['id']);
+
+		// Also update student_course
+		db_query("UPDATE {student_course} SET totalcreditload = '%s' WHERE academic_courseid = %d", $form_state['values']['creditpoint'], $loaded['id']);
+
+		$success = TRUE;
+		if($success) {
+		  drupal_set_message('Update completed successfully');
+		  return;
+		}
+	}
+  
+	$success = drupal_write_record($course_table, $form_state['values']);
+	$course_id = db_fetch_object(db_query("SELECT MAX(id) as id FROM {$course_table}"));
+  
+	// insert into student_course
+	db_query("INSERT INTO {student_course} (academic_courseid, registered, totalcreditload, uid) VALUES (%d, %d, %d, %d)", $course_id, 0, $form_state['values']['creditpoint'], 0);
+
+	if($success) {
+		// TODO: Add new course_content node(s). Contents to add are Course Introduction, Course materials, course references
+		// Invoke acm_school_create_batch_course_content here
+		//acm_school_create_batch_course_content($course_id);
+		if(isset($course_id)) {
+		call_user_func_array('acm_school_create_batch_course_content', array($course_id));
+		}
+		/*module_load_include('inc', 'node', 'node.pages');
+		$node = array('type' => 'course_content');
+		$node_form_state = array();
+		$node_form_state['values']['title'] = t('Course Introduction');
+		$node_form_state['values']['field_course_ref_id'][0]['value'] = $course_id;
+		$node_form_state['values']['op'] = t('Save');
+		drupal_execute('course_content_node_form', $node_form_state, (object)$node);
+		$nid = $node_form_state['nid'];
+		$node = node_load($nid);
+		$node->uid = 1;
+		node_save($node);*/
+		//drupal_set_message('Course created successfully.' . l(t('View course'), "course/$nid"));
+	} else {
+		drupal_set_message("Something dangerous happened! Couldn't save new Course", 'error');
+	}
+}
+ 
+function college_school_addcourse_form_validate($form, &$form_state){
+	$course = $form_state['values']['_course'];
+	$course_title = $form_state['values']['title'];
+	$course_code = $form_state['values']['code'];
+	$fields = drupal_schema_fields_sql('academic_course');
+	$op = $form_state['values']['op'];
+	
+	if($op != 'Update') {
+        // does course title exist?
+        if(in_array($course_title, Course::listCourses($fields))) {
+            form_error($form['title'], t('The course title @title already exist', array('@title' => $course_title)));
+        }
+        // does course code exist?
+        if(in_array($course_code, Course::listCourses($fields))) {
+            form_error($form['code'], t('The course code @name already exist.', array('@code' => $course_code)));
+        }
+    }
+}
+
+/**
+ * Implements hook_course_settings()
+ */
+function college_school_course_settings($course){
+	$form['#attributes'] = array('class' => 'form-horizontal');
+	$form['number_of_cas'] = array(
+		'#type' => 'select',
+		'#title' => t('Number of CAs'),
+		'#options' => array(1,2,3,4),
+		'#default_value' => variable_get('number_of_cas', (int)''),
+	);
+	$form['ca_approval_method'] = array(
+		'#type' => 'select',
+		'#title' => t('CA approval method'),
+		'#options' => array('Approved along with exams'),
+		'#default_value' => variable_get('ca_approval_method', ''),
+	);
+	$form['ca_maximum_mark'] = array(
+		'#type' => 'textfield',
+		'#title' => t('CA maximum mark'),
+		'#default_value' => variable_get('ca_maximum_mark', (int)''),
+	);
+	$form['exam_maximum_mark'] = array(
+		'#type' => 'textfield',
+		'#title' => t('Exam maximum mark'),
+		'#default_value' => variable_get('exam_maximum_mark', (int)'')
+	);
+  
+	return system_settings_form($form);
+}
+/*
+ * Implement hook_grade_settings
+ */
+function college_school_grade_settings($type){
+	$settings['type'] = 'grade';
+	$settings['grade']['configure'] = array(
+		'title' => t('Configure grading system'),
+		'callback url' => 'admin/settings/school/grade/gradingsystem'
+	);
+	// set global grading point
+	$settings['grade']['grade point'] = array(
+		'title' => 'Set grade point',
+		'callback url' => 'admin/settings/school/grade/gradepoint'
+	);
+	// set grading point for a specific department
+	// a staff in medicine department should be able to contact the IT
+	// staff (Acadaman authorized user) to set medicine department
+	// grade point to 7
+	$settings['grade']['department grade point'] = array(
+		'title' => 'Set department grade point',
+		'callback url' => 'admin/settings/school/grade/dept_gradepoint'
+	);
+	$settings['grade']['grade a student'] = array(
+		'title' => 'Grade a student',
+		'callback url' => 'admin/settings/school/grade/add'
+	);
+	$settings['grade']['score a student'] = array(
+		'title' => 'Score a student',
+		'callback url' => 'admin/settings/school/score/add'
+	);
+	if($type == 'gradingsystem') {
+		$settings['grade']['gradingsystem_form'] = drupal_get_form('college_school_gradingsystem_settings_form'); 
+	}
+	if($type == 'gradepoint') {
+		$settings['grade']['gradepoint_form'] = drupal_get_form('college_school_gradepoint_settings_form'); 
+	}
+	if($type == 'dept_gradepoint') {
+		$settings['grade']['dept_gradepoint_form'] = drupal_get_form('college_school_dept_gradepoint_settings_form');
+	}
+	if($type == 'add') {
+		$settings['grade']['grade_form'] = drupal_get_form('college_school_grade_form');
+	}
+  
+    return $settings;
+}
+function college_school_gradingsystem_settings_form(&$form_state) {
+	$form['#attributes'] = array('class' => 'form-horizontal');
+	$form['grade_system'] = array(
+		'#type' => 'select',
+		'#title' => t('Grade system'),
+		'#options' => drupal_map_assoc(array('None', 'Local country', 'WES')),
+		'#default_value' => variable_get('grade_system_type', ''),
+		'#ahah' => array(
+		  'path' => 'grade/ahah/grade-system/callback',
+		  'wrapper' => 'grade-system-wrapper',
+		  'effect' => 'fade'
+		),
+		'#required' => TRUE
+	);
+  
+	$form['grade_system_holder'] = array(
+		'#tree' => TRUE,
+		'#title' => t(''),
+		'#type' => 'fieldset',
+		'#prefix' => '<div id="grade-system-wrapper">',
+		'#suffix' => '</div>',
+	);
+
+	// @todo If type is Local country
+	// Add a field to select country.
+	// variable_get('country_grade_system', '')
+	if($edit['grading_system'] == 'Local country') {
+		$form['grade_system_holder']['country_grade_system'] = array(
+			'#type' => 'select',
+			'#title' => t('Country'),
+			'#description' => t('Select a country'),
+			'#options' => array('ng'),
+			'#default_value' => variable_get('country_grade_system', '')
+		);
+	}
+    return system_settings_form($form);
+}
+
+/**
+ * Implements hook_grade_local_country
+ *
+ * Grade point system by local country as seen here: http://en.wikipedia.org/wiki/Grading_systems_by_country
+ */
+function colleg_school_grade_local_country($country_code) {
+
+}
+
+/**
+ * Implements hook_grade_ects
+ *
+ * Grade point system by ECTS http://en.wikipedia.org/wiki/ECTS_grading_scale
+ */
+function college_school_grade_ects() {
+
+}
+
+/**
+ * Implements hook_grade_wes
+ *
+ * Grade point system by WES as seen at http://wenr.wes.org/2011/08/wenr-julyaugust-2011-practical-information/
+ */
+function college_school_grade_wes() {
+
+}
+
+/**
+ * Computes student's current GPA. Computes student's GPA
+ * for the current semester/session
+ */
+function college_school_compute_current_gpa($uid, $latest_score) {
+  // get the current grade system and switch on that.
+  // get current semester or session.
+  // get the courses taken by the student in that semester.
+  // get the courses credit point.
+  // get the grade gotten on each course by student. course => grade
+  // get the gpe on each grade.
+  // calculate and return gpa 
+}
+
+/**
+ * Computes student's cumulative GPA
+ */
+function college_school_compute_cumulative_gpa($uid) {
+
+}
+
+function college_school_gradepoint_settings_form() {
+  $form['#attributes'] = array('class' => 'form-horizontal');
+  $form['gradepoint'] = array(
+    '#type' => 'select',
+    '#title' => t('Set grade point'),
+    '#options' => array(4, 5, 7),
+    '#default_value' => variable_get('gradepoint', '')
+  );
+  return system_settings_form($form);
+}
+function college_school_dept_gradepoint_settings_form() {
+	$form['#attributes'] = array('class' => 'form-horizontal');
+	$form['gradepoint_depts'] = array(
+		'#type' => 'select', // multiple
+		'#title' => t('Department'),
+		'#options' => array(),
+		'#default_value' => variable_get('gradepoint_depts', array())
+	);
+	$form['dept_gradepoint'] = array(
+		'#type' => 'select',
+		'#title' => t('Set grade point'),
+		'#options' => array(4,5,7),
+		'#default_value' => variable_get('dept_gradepoint', '')
+	);
+  return system_settings_form($form);
+}
+
+function college_school_grade_form(&$form_state, $grade = NULL, $edit = NULL ) {
+	$edit = (empty($form_state['values']))? $grade : $form_state['values'];
+
+	if($edit) {
+	drupal_set_title('Edit Grade');
+	}else {
+	drupal_set_title('Add Grade');
+	}
+
+	$form['#attributes'] = array('class' => 'form-horizontal');
+	$students = acm_school_get_users_in_a_role(29);
+	// student uid
+	$form['uid'] = array(
+		'#type' => 'select',
+		'#title' => t('Student'),
+		'#description' => t('Select student to grade'),
+		'#options' => $students,
+		'#default_value' => $edit['uid'],
+		'#required' => TRUE
+	);
+	// automatically populated when student uid is selected
+	$form['course'] = array(
+		'#type' => 'select',
+		'#title' => t('Course'),
+		'#description' => t('Student course'),
+		'#options' => array(),
+		'#default_value' => $edit['course'],
+		'#required' => TRUE 
+	);
+	$form['dropped'] = array(
+		'#type' => 'checkbox',
+		'#title' => t('Is course dropped?'),
+		'#description' => t('Whether course is dropped or not'),
+		'#default_value' => $edit['dropped']
+	);
+	// automatically populated when uid is selected
+	$form['matriculationnumber'] = array(
+		'#type' => 'textfield',
+		'#title' => t('Matriculation number'),
+		'#description' => t('Student matriculation number'),
+		'#default_value' => $edit['matriculationnumber'],
+		'#required' => TRUE 
+	);
+	// automatically computed
+	$form['currentgpa'] = array(
+		'#type' => 'textfield',
+		'#title' => t('currentgpa'),
+		'#description' => t('Student Current GPA'),
+		'#default_value' => $edit['currentgpa'],
+		'#required' => TRUE
+	);
+	$form['grade'] = array(
+		'#type' => 'textfield',
+		'#title' => t('Grade'),
+		'#description' => t('Grade representation of a score based on Grading system'),
+		'#default_Value' => $edit['grade']
+	);
+	$form['gradepoint'] = array(
+		'#type' => 'textfield',
+		'#title' => t('Grade point'),
+		'#description' => t('The applicable grade point to a particular score. For example, a score(total score) of 60 might have a grade point of 3 or 3.3 if the applicable grade is B+'),
+		'#default_value' => $edit['gradepoint']
+	);
+
+	// automatically populated
+	$form['creditload'] = array(
+		'#type' => 'textfield',
+		'#title' => t('Credit load'),
+		'#description' => t('The credit point for the course'),
+		'#default_value' => $edit['creditload']
+	);
+
+	/**
+	* average test score
+	* gotten from score table based on the uid
+	*/ 
+	$form['test_score_id'] = array(
+		'#type' => 'textfield',
+		'#title' => t('Test score'),
+		'#description' => t('Average test score for this student grade'),
+		'#default_value' => $edit['test_score_id']
+	);
+	$form['exam_score_id'] = array(
+		'#type' => 'textfield',
+		'#title' => t('Exam score'),
+		'#description' => t('Student exam score'),
+		'#default_value' => $edit['exam_score_id'],
+		'#required' => TRUE 
+	);
+	$form['totalscore'] = array(
+		'#type' => 'textfield',
+		'#title' => t('Total score'),
+		'#description' => t('Total score (testscores + exam score)'),
+		'#default_value' => $edit['totalscore']
+	);
+	$form['submittedby'] = array(
+		'#type' => 'select',
+		'#title' => t('Submitted by'),
+		'#description' => t('Select the lecturer who submitted the grade'),
+		'#default_value' => $edit['submittedby'],
+		'#options' => array(),
+		'#required' => TRUE
+	);
+	$form['submitted'] = array(
+		'#type' => 'checkbox',
+		'#title' => t('Submitted for approval?'),
+		'#description' => t('Whether this grade is submitted for approval or not'),
+		'#default_value' => $edit['submitted'],
+		'#required' => TRUE
+	);
+	$form['approved'] = array(
+		'#type' => 'checkbox',
+		'#title' => t('Is grade approved?'),
+		'#description' => t('Whether this grade has been approved or not'),
+		'#default_value' => $edit['approved']
+	);
+    $form['submit'] = array(
+		'#type' => 'submit',
+		'#value' => isset($score) ? 'Update' : 'Save',
+		'#attributes' => array('class' => 'btn'),
+	);
+	$form['_grade'] = array('#type' => 'value', '#value' => $edit);
+	$form['created'] = array('#type' => 'value', '#value' => time());
+	if(isset($grade)) {
+		$form['state'] = array('#type' => 'value', '#value' => 'update');
+		$form['updated'] = array('#type' => 'value', '#value' => time());
+		$form['_loaded'] = array('#type' => 'value', '#value' => $grade);
+	}
+  return $form;
+}
+function college_school_grade_form_validate($form, &$form_state) {
+
+}
+function college_school_grade_form_submit($form, &$form_state) {
+
+}
+/**
+ * @deprecated
+ * @return type 
+ */
+function college_school_grade_settings_form() {
+	if($type == 'gradingsystem') {
+		return college_school_gradingsystem_settings_form();
+	}
+}
+/**
+ * Implements hook_fees_type 
+ */
+function college_school_fees_type() {
+	return array('General', 'Program Specific');
+}
+
+/**
+ * implements hook_faculty 
+ */
+function college_school_faculty() {
+	$faculty_view = views_get_view('college_faculty_view');
+	return $faculty_view;
+}
+
+/**
+ * implements hook_department 
+ */
+function college_school_department() {
+	$department_view = views_get_view('college_department_view');
+	return $department_view;
+}
+
+/**
+ * Implements hook_grade 
+ */
+function college_school_grade() {
+	$grade_view = views_get_view('college_grade_view');
+	return $grade_view;
+}
+
+/**
+ * Implements hook_fees 
+ */
+function college_school_fees() {
+  
+}
+
+/**
+ * Implements hook_admission 
+ * 
+ * Landing page of Admission
+ */
+function college_school_admission() {
+	$admission_view = views_get_view('college_admission_view');
+	return $admission_view;
+}
+
+/**
+ * Implements hook_fees_catalog 
+ */
+function college_school_fees_catalog_info() {
+	return array('Freshman', 'Freshman local', 'Freshman international', 'Returning student & spillover', 'Returning student local & spillover', 'Returning student international & spillover', 'Local', 'Non-local', 'International');
+}
+
+/**
+ * Implements hook_acm_student_application 
+ */
+function college_school_acm_student_application() {
+	global $user;
+	// profile = StudentProfile::getStudentProfile($user);
+	// courseinfo = CourseInfo::getCourseInfo($user);
+	// student_sponsorinfo = SponsorsInfo::getSponsors($user);
+	// student_nextofkininfo = NextOfKinInfo::getNextOfKinInfo($user);
+	// student_healthinfo = HealthInfo::getHealthInfo($user);
+	// student_results = ExaminationResult::getResults($user);
+	// studentApplication = new StudentApplication($user);
+
+	switch($_GET['edit']) {
+		case 'app':
+			// $student_application object for the current student
+			$profile = acm_school_profile_load($user->uid);
+			//  drupal_get_form('college_school_admission_course_form', $profile);
+			return drupal_get_form('acm_school_student_profile_form', (array)$profile->profile, NULL);
+	}
+
+	switch($_GET['app']) {
+	case 'sponsor':
+		drupal_set_title('Sponsor');
+		$studentApplication = views_get_view('college_student_application_view');
+		$studentApplication->display = 'sponsor';
+		break;
+    case 'course':
+		drupal_set_title('Course');
+        $studentApplication = views_get_view('college_student_application_view');
+        $studentApplication->display = 'course';
+        break;
+    case 'nextofkin':
+		drupal_set_title('Next of Kin');
+        $studentApplication = views_get_view('college_student_application_view');
+        $studentApplication->display = 'nextofkin';
+        break;
+    default:
+        $studentApplication = views_get_view('college_student_application_view');
+        $studentApplication->display = 'default';
+        break;
+	}
+
+	return $studentApplication;
+}
+
+/**
+ * Implements hook_student_application_items
+ */
+function college_school_student_application_items() {
+	$items = array();
+	$items['sponsor'] = array(
+		'data' => l('Sponsor Information', 'application/sponsor')
+	);
+	$items['course'] = array(
+		'data' => l('Course Information', 'application/course')
+	);
+ return $items;
+
+}
+
+/**
+ * Proposal: A proposal to replace acm_school_admission_application_callback
+ * 
+ * This hook defines the structure of admission application steps that 
+ * can be implemented per school type. At the end of every application step,
+ * this hook is looked up to determine what application form is next
+ * 
+ * @example 
+ */
+function college_school_admission_application_info() {
+	$application_form = array(
+    'course' => array(
+		'title' => 'course',
+		'form_id' => 'college_school_admission_course_form'
+    ),
+    'sponsor' => array(
+		'title' => 'sponsor',
+		'form_id' => 'college_school_admission_sponsors_form'
+    ),
+    'nextofkin' => array(
+		'title' => 'nextofkin',
+		'form_id' => 'college_school_admission_nextofkin_form'
+    ),
+    'health' => array(
+		'title' => 'health',
+		'form_id' => 'college_school_admission_health_form'
+    ),
+	);
+	return $application_form;
+}
+/**
+ * Implements hook_admission_form_id
+ * @return string 
+ */
+function college_school_admission_form_id() {
+	return 'college_school_admission_form';
+}
+
+function college_school_admission_course_form(&$form_state, $course_info, $steps_order, $hook){
+	$edit = (empty($form_state['values'])) ? (array) $course_info : $form_state['values'];
+	$form['#attributes'] = array('class' => 'form-horizontal');
+	$form['course_info'] = array(
+		'#type' => 'markup',
+		'#value' => '<div style="background:#f6f6f2; padding:5px">Course Information</div>',
+	);
+	$form['level'] = array(
+		'#type' => 'select',
+		'#title' => t('Academic level'),
+		'#default_value' => $edit['level'],
+		'#required' => TRUE,
+		'#options' => array('100', '200', '300', '400', '500'), // get values from StudentLevel class
+	);
+	$form['programme'] = array(
+		'#type' => 'select',
+		'#title' => t('Programme'),
+		'#options' => array('Economics', 'Computer Science'), // get values from Programme class
+		'#default_value' => $edit['programme'], 
+		'#required' => TRUE,
+	);
+	$form['modeofentry'] = array(
+		'#type' => 'select',
+		'#title' => t('Mode of entry'),
+		'#options' => array('UME', 'DE'), // get values from Admission class
+		'#default_value' => $edit['modeofentry'], 
+		'#required' => TRUE,
+	);
+	$form['matriculationnumber'] = array(
+		'#type' => 'textfield',
+		'#title' => t('Matric number'),
+		'#default_value' => $edit['matriculationnumber'],
+		'#required' => TRUE
+	);
+	$form['modeofstudy'] = array(
+		'#type' => 'select',
+		'#title' => t('Mode of Study'),
+		'#options' => array('Full-time', 'Part-time'), // get values from ModeOfC class
+		'#default_value' => $edit['modeofstudy'],
+		'#required' => TRUE,
+	);
+	// add dob here
+	$form['yearofentry'] = array(
+		'#type' => 'select',
+		'#title' => t('Year of entry'),
+		'#options' => array('2013', '2012'), // display 10 years + the current year
+		'#default_value' => $edit['yearofentry'],
+		'#required' => TRUE,
+	);
+	$form['registeredsession'] = array(
+		'#type' => 'select',
+		'#title' => t('Academic session'),
+		'#default_value' => $edit['registeredsession'], // the current academic session
+		'#options' => AcademicSession::listAcademicSession(),
+		'#description' => t('The academic session you are registering for'),
+		'#required' => TRUE,
+	);
+	$form['registeredsemester'] = array(
+		'#type' => 'select',
+		'#title' => t('Academic semester'),
+		'#options' => array('Fall', 'Summer'),
+		'#description' => t('The academic semester you are registering for'),
+		'#default_value' => $edit['registeredsemester'], // get values from Admission->semester to display the semesters available
+		'#required' => TRUE,
+	);
+	$form['submit'] = array(
+		'#type' => 'submit',
+		'#value' => 'Save and continue',
+		'#attributes' => array('class' => 'btn')
+	);
+	
+	$form['_current'] = array('#type' => 'value', '#value' => $hook);
+	$form['_next'] = array('#type' => 'value', '#value' => 'sponsor');
+	$form['_steps'] = array('#type' => 'value', '#value' => $steps_order);
+	$form['_course_info'] = array('#type' => 'value', '#value' => $course_info);
+  
+	return $form;
+}
+function college_school_admission_course_form_submit($form, &$form_state) {
+	$current = $form_state['values']['_current'];
+	$next = $form_state['values']['_next'];
+	$course_info = $form_state['values']['_course_info'];
+  
+	$course_info_table = 'course_info';
+	$tracker = db_result(db_query("SELECT step FROM {student_application_tracker} WHERE email = '%s'", $email));
+	$success = FALSE;
+  
+	if(!empty($course_info)) {
+    // it's an edit
+    $success = drupal_write_record($course_info_table, $course_info, 'id');
+    if($success) {
+		drupal_set_message('Update completed successfully');
+		return;
+    }
+  }
+  
+	drupal_write_record($course_info_table, $form_state['values']);
+	// also update student_application_tracker
+	$tracker_data = array('email' => base64_decode($_GET['c']), 'step' => $next);
+	drupal_write_record('student_application_tracker', $tracker_data, 'email');
+  
+	$success = TRUE;
+	if($success) {
+		drupal_goto('admission/apply', 'step=' . $next . '&c=' . $_GET['c']); 
+	}
+}
+
+/**
+ * Saves or update course_info 
+ */
+function college_school_course_info_save() {
+  
+}
+
+/**
+ * Menu callback for admission/apply/sponsor
+ * @return string 
+ */
+function college_school_admission_sponsors_form(&$form_state, $sponsors_info, $steps_order, $hook) {
+	$edit = (empty($form_state['values'])) ? (array)$sponsors_info : $form_state['values'];
+  
+	$form['#attributes'] = array('class' => 'form-horizontal');
+	$form['sponsors'] = array(
+		'#type' => 'markup',
+		'#value' => '<div style="background:#f6f6f2; padding:5px">Sponsors Information</div>',
+	);
+	$form['name'] = array(
+		'#type' => 'textfield',
+		'#title' => t('Full names'),
+		'#default_value' => $edit['name'],
+		'#required' => TRUE,
+	);
+	$form['address1'] = array(
+		'#type' => 'textfield',
+		'#title' => t('Address1'),
+		'#default_value' => $edit['address1'],
+		'#required' => TRUE,
+	);
+	$form['address2'] = array(
+		'#type' => 'textfield',
+		'#title' => t('Address2'),
+		'#default_value' => $edit['address2'],
+	);
+	$form['nationality'] = array(
+		'#type' => 'select',
+		'#title' => t('Nationality'),
+		'#options' => array(0 => 'Nigeria', 1 => 'Togo'),
+		'#default_value' => $edit['nationality'],
+		'#required' => TRUE,
+	);
+	$form['state'] = array(
+		'#type' => 'select',
+		'#title' => t('State'),
+		'#options' => array(0 => 'Other'),
+		'#default_value' => $edit['state'],
+		'#required' => TRUE,
+	);
+	$form['phone'] = array(
+		'#type' => 'textfield',
+		'#title' => t('Phone'),
+		'#default_value' => $edit['phone'],
+	);
+	$form['mobile'] = array(
+		'#type' => 'textfield',
+		'#title' => t('Mobile'),
+		'#default_value' => $edit['mobile'],
+		'#required' => TRUE
+	);
+	$form['submit'] = array(
+		'#type' => 'submit',
+		'#value' => 'Next',
+		'#attributes' => array('class' => 'btn')
+	);
+  
+	$form['_current'] = array('#type' => 'value', '#value' => $hook);
+	$form['_next'] = array('#type' => 'value', '#value' => 'nextofkin');
+	$form['_steps'] = array('#type' => 'value', '#value' => $steps_order);
+	$form['_sponsors_info'] = array('#type' => 'value', '#value' => $sponsors_info);
+  
+	return $form;
+}
+function college_school_admission_sponsors_form_submit($form, &$form_state) {
+	$current = $form_state['values']['_current'];
+	$next = $form_state['values']['_next'];
+	$sponsors_info = $form_state['values']['_sponsors_info'];
+  
+	$sponsors_info_table = 'sponsors_info';
+	$success = FALSE;
+  
+	if(!empty($sponsors_info)) {
+		// it's an edit
+		$success = drupal_write_record($sponsors_info_table, $sponsors_info, 'id');
+    if($success) {
+		drupal_set_message('Update completed successfully');
+		return;
+    }
+  }
+  	drupal_write_record($sponsors_info_table, $form_state['values']);
+	// also update student_application_tracker
+	$tracker_data = array('email' => base64_decode($_GET['c']), 'step' => $next);
+	drupal_write_record('student_application_tracker', $tracker_data, 'email');  
+  
+	// update student_application
+	$student_application['sponsors_infoid'] = db_last_insert_id($sponsors_info_table, 'id');
+	drupal_write_record('student_application', $student_application, 'id');
+  
+	$success = TRUE;
+	if($success) {
+		drupal_goto('admission/apply', 'step=' . $next . '&c=' . $_GET['c']); 
+	}
+}
+
+/**
+ * Save or update sponsors_info 
+ */
+function college_school_sponsors_save() {
+  
+}
+function college_school_admission_nextofkin_form(&$form_state, $nextofkin_info, $steps_order, $hook) {
+	$edit = (empty($form_state['values'])) ? (array)$nextofkin_info : $form_state['values'];
+	// register previous form as sponsors (this is kind of optional)
+	$form['#attributes'] = array('class' => 'form-horizontal');
+	$form['nextofkin'] = array(
+		'#type' => 'markup',
+		'#value' => '<div style="background:#f6f6f2; padding:5px">Next of kin Information</div>',
+	);
+	$form['name'] = array(
+		'#type' => 'textfield',
+		'#title' => t('Full names'),
+		'#default_value' => $edit['name'],
+		'#required' => TRUE,
+	);
+	$form['address1'] = array(
+		'#type' => 'textfield',
+		'#title' => t('Address1'),
+		'#default_value' => $edit['address1'],
+		'#required' => TRUE,
+	);
+	$form['address2'] = array(
+		'#type' => 'textfield',
+		'#title' => t('Address2'),
+		'#default_value' => variable_get('address2', ''),
+	);
+	$form['relationship'] = array(
+		'#type' => 'select',
+		'#title' => t('Relationship'),
+		'#options' => NextOfKinRelationship::listNextOfKinRelationship(),
+		'#default_value' => $edit['relationship'],
+		'#required' => TRUE,
+	);
+	$form['phone'] = array(
+		'#type' => 'textfield',
+		'#title' => t('Phone'),
+		'#default_value' => $edit['phone'],
+	);
+	$form['mobile'] = array(
+		'#type' => 'textfield',
+		'#title' => t('Mobile'),
+		'#default_value' => $edit['mobile'],
+		'#required' => TRUE,
+	);
+	$form['submit'] = array(
+		'#type' => 'submit',
+		'#value' => 'Next',
+		'#attributes' => array('class' => 'btn')
+	);
+  
+	$form['_current'] = array('#type' => 'value', '#value' => $hook);
+	$form['_next'] = array('#type' => 'value', '#value' => 'health');
+	$form['_steps'] = array('#type' => 'value', '#value' => $steps_order);
+	$form['_nextofkin_info'] = array('#type' => 'value', '#value' => $nextofkin_info);
+  
+	return $form;
+}
+
+function college_school_admission_nextofkin_form_submit($form, &$form_state) {
+	$next = $form_state['values']['_next'];
+	$nextfkin_info = $form_state['values']['_nextofkin_info'];
+  
+	$nextofkin_info_table = 'next_of_kin_info';
+	$success = FALSE;
+  
+	if(!empty($nextfkin_info)) {
+    // it's an edit
+		$success = drupal_write_record($nextofkin_info_table, $nextfkin_info, 'id');
+		if($success) {
+		drupal_set_message('Update completed successfully');
+		return;
+		}
+	}
+  
+	drupal_write_record($nextofkin_info_table, $form_state['values']);
+	// also update student_application_tracker
+	$tracker_data = array('email' => base64_decode($_GET['c']), 'step' => $next);
+	drupal_write_record('student_application_tracker', $tracker_data, 'email');
+  
+	// update student_application
+	$student_application['next_of_kin_infoid'] = db_last_insert_id($nextofkin_info_table, 'id');
+	drupal_write_record('student_application', $student_application, 'id');
+  
+	$success = TRUE;
+	if($success) {
+		drupal_goto('admission/apply', 'step=' . $next . '&c=' . $_GET['c']); 
+	}
+}
+
+/**
+ * Save or update nextofkin_info 
+ */
+function college_school_nextofkin_save() {
+  
+}
+function college_school_admission_health_form(&$form_state, $health_info, $steps_order, $hook) {
+	$form['#attributes'] = array('class' => 'form-horizontal');
+	$form['sponsors'] = array(
+		'#type' => 'markup',
+		'#value' => '<div style="background:#f6f6f2; padding:5px">Health Information</div>',
+	);
+	$form['status'] = array(
+		'#type' => 'select',
+		'#title' => t('Status'),
+		'#options' => HealthStatus::listHealthStatus(),
+		'#default_value' => $edit['health'], 
+		'#required' => TRUE,
+	);
+	$form['disabilities'] = array(
+		'#type' => 'select',
+		'#title' => t('Disabilities'),
+		'#options' => HealthDisabilities::listHealthDisabilities(),
+		'#default_value' => $edit['disabilities'], 
+	);
+	$form['submit'] = array(
+		'#type' => 'submit',
+		'#value' => 'Next',
+		'#attributes' => array('class' => 'btn')
+	);
+  	$form['_current'] = array('#type' => 'value', '#value' => $hook);
+	$form['_next'] = array('#type' => 'value', '#value' => 'finished');
+	$form['_steps'] = array('#type' => 'value', '#value' => $steps_order);
+	$form['_health_info'] = array('#type' => 'value', '#value' => $health_info);
+    return $form;
+}
+
+function college_school_admission_health_form_submit($form, &$form_state) {
+	$next = $form_state['values']['_next'];
+	$health_info = $form_state['values']['_health_info'];
+  
+	$health_info_table = 'health_info';
+	$success = FALSE;
+  
+	if(!empty($health_info)) {
+    // it's an edit
+		$success = drupal_write_record($health_info_table, $health_info, 'id');
+		if($success) {
+			drupal_set_message('Update completed successfully');
+			return;
+    }
+  }
+  
+	drupal_write_record($health_info_table, $form_state['values']);
+	// also update student_application_tracker
+	$tracker_data = array('email' => base64_decode($_GET['c']), 'step' => $next);
+	drupal_write_record('student_application_tracker', $tracker_data, 'email');
+  
+	// update student_application
+	$student_application['health_infoid'] = db_last_insert_id($health_info_table, 'id');
+	drupal_write_record('student_application', $student_application, 'id');
+  
+	$success = TRUE;
+	if($success) {
+		drupal_goto('admission/apply', 'step=' . $next . '&c=' . $_GET['c']); 
+	}
+}
+
+/**
+ * Save or update health_info
+ */
+function college_school_health_save() {
+  
+}
+
+/**
+ * @todo Implement examresults upload functionality and submit callback
+ * 
+ * @param type $form_state
+ * @param type $profile
+ * @param type $steps_order
+ * @param type $hook
+ * @return string 
+ */
+function college_school_admission_examresults_form(&$form_state, $profile, $steps_order, $hook) {
+	$form['#attributes'] = array('class' => 'form-horizontal');
+	$form['examresults'] = array(
+		'#type' => 'markup',
+		'#value' => '<div style="background:#f6f6f2; padding:5px">Academic results</div>',
+	);
+	$form['subject'] = array(
+		'#type' => 'textfield',
+		'#title' => t('Subject'),
+		'#default_value' => variable_get('level', ''),
+		//'#required' => TRUE,
+	);
+	$form['grade'] = array(
+		'#type' => 'textfield',
+		'#title' => t('Grade'),
+		'#default_value' => variable_get('programme', ''), 
+		//'#required' => TRUE,
+	);
+	$form['institution'] = array(
+		'#type' => 'textfield',
+		'#title' => t('Institution'),
+		'#default_value' => variable_get('modeofentry', ''), 
+		//'#required' => TRUE,
+	);
+	$form['qualification'] = array(
+		'#type' => 'textfield',
+		'#title' => t('Qualification'),
+		'#default_value' => variable_get('matric_no', ''),
+	);
+	$form['submit'] = array(
+		'#type' => 'submit',
+		'#value' => 'Save',
+		'#attributes' => array('class' => 'btn')
+	);
+  
+	$form['_current'] = array('#type' => 'value', '#value' => $hook);
+	$form['_next'] = array('#type' => 'value', '#value' => 'finished');
+	$form['_steps'] = array('#type' => 'value', '#value' => $steps_order);
+  
+	return $form;
+}
+
+function college_school_admission_examresults_form_submit($form, &$form_state) {
+	$current = $form_state['values']['_current'];
+	$steps = $form_state['values']['_steps'];
+	$next = $form_state['values']['_next'];
+	drupal_goto('admission/apply', 'step=' . $next);
+  
+	//return $form_state['redirect'] = 'admission/apply/examresults';
+}
+
+/**
+ * Save or update examresults 
+ */
+function college_school_examresults_save() {
+  
+}
+
+/**
+ * Implements hook_setup_tasks 
+ *
+ * @see acm_school_setup
+ */
+function college_school_setup_tasks() {
+	// invoke steps_list here so we can pass on the next step
+	if($_GET['step'] == 'setup') {
+		$step = 'add-faculty';
+		$output = drupal_get_form('college_school_setup_faculty_form');
+		variable_set('setup_step', 'faculty');
+	}
+	if($_GET['step'] == 'course'){
+		$step = 'add-course';
+		$output = drupal_get_form('college_school_setup_course_form');
+		variable_set('setup_step', 'course');
+	}
+  return $output;
+}
+
+function college_school_setup_faculty_form() {
+	$form['#attributes'] = array('class' => 'form-horizontal');
+	$form['name'] = array(
+		'#type' => t('textfield'),
+		'#title' => t('Name'),
+		'#description' => t('Enter a faculty name'),
+	);
+	$form['description'] = array(
+		'#type' => t('textfield'),
+		'#title' => t('Description'),
+		'#description' => t('Enter a description'),
+	);
+	$form['faculty_code'] = array(
+		'#type' => t('textfield'),
+		'#title' => t('Faculty code'),
+		'#description' => t('Enter a code for this faculty'),
+	);
+	$form['email_subdomain'] = array(
+		'#type' => t('textfield'),
+		'#title' => t('Email subdomain'),
+		'#description' => t('Enter an email subdomain for this faculty. E.g'),
+	);
+	$form['submit'] = array(
+		'#type' => 'submit',
+		'#value' => 'Save and continue',
+		'#attributes' => array('class' => 'btn')
+	);
+  return $form;
+}
+
+function college_school_setup_faculty_form_submit($form, &$form_state) {
+	drupal_goto('setup', 'step=course'); // $steps['next'];
+}
+function college_school_setup_course_form() {
+	$form['#attributes'] = array('class' => 'form-horizontal');
+	$form['submit'] = array(
+		'#type' => 'submit',
+		'#value' => 'Save and continue',
+		'#attributes' => array('class' => 'btn')
+	);
+  return $form;
+}
+
+function college_school_setup_course_form_submit($form, &$form_state) {
+	drupal_goto('setup', 'step=finished');
+}
+
+/**
+ * implements hook_admission_applications_list 
+ * 
+ * Implementation of a list of admission applications (report)
+ */
+function college_school_admission_applications_list() {
+	$admission_applications = views_get_view('college_admission_applications');
+	return $admission_applications;
+}
+
+/**
+ * Loads the current user course_info object
+ * 
+ * User must have role Student
+ * 
+ * @param type $uid 
+ */
+function college_school_admission_course_load($uid) {
+  
+}
+
+/**
+ * course_info(id) and uid are loaded from uri due to calls to
+ * college_school_course_load and acm_school_profile_load
+ * 
+ * @param type $course 
+ */
+function college_school_admission_course_edit($uid) {
+    // load the course_info object by calling college_school_course_load
+    $course_info = college_school_admission_course_load($uid);
+    return drupal_get_form('college_school_admission_course_form', $course_info, NULL, NULL); 
+}
+
+/**
+ * Load course_info object from db
+ *
+ * @deprecated
+ * @see college_school_admission_course_load
+ */
+function college_school_course_load($uid) {
+
+}
+
+/**
+ * Implements hook_academic_level
+ */
+function college_school_academic_level() {
+    return drupal_map_assoc(array(100, 200, 300, 400, 500, 600, 700));
+}
+
+/**
+ * Implements hook_student_course
+ */
+function college_school_student_course() {
+
+	drupal_set_title('Course');
+	$studentCourses = views_get_view('student_course');
+	$studentCourses->display = 'college_school_student_course';
+
+	return $studentCourses;
+}
+
+/**
+ * Implements hook_score_settings
+ *
+ */
+function college_school_score_settings($type) {
+	$settings['type'] = 'score';
+	if($type == 'add') {
+		$settings['score']['score_form'] = drupal_get_form('college_school_score_form');
+	}
+  return $settings;
+}
+
+function college_school_score_form(&$form_state, $score = NULL, $edit = NULL) {
+	$edit = (empty($form_state['values'])) ? (array)$score : $form_state['values'];
+  
+	if($edit) {
+		drupal_add_js(array('score' => array('context' => 'score-form-edit')), 'setting');
+		drupal_set_title('Edit Score');
+	}else {
+		drupal_set_title('Add Score');
+	}
+
+	$form['#attributes'] = array('class' => 'form-horizontal');
+	//$programme = $edit['programme'];
+	$programme = isset($form_state['values']['programme']) ? $form_state['values']['programme'] : NULL;
+  
+	// programme
+	$form['programme'] = array(
+		'#type' => 'select',
+		'#title' => t('Programme'),
+		'#description' => t('Select the student programme'),
+		'#options' => Programme::listProgrammes(array('id','name'), 'id'),
+		'#default_value' => $edit['programme'],
+		'#ahah' => array(
+			'path' => 'score/ahah/programme/callback',
+			'wrapper' => 'programme-wrapper',
+			'event' => 'change', // default value: does not need to be set explicitly.
+		),
+		'#required' => TRUE
+	);
+	$form['programme_holder'] = array(
+		'#tree' => TRUE,
+		'#prefix' => '<div id="programme-wrapper">',
+		'#suffix' => '</div>',
+	);
+
+	$courses = isset($programme) ? Course::getCoursesByProgramme($programme) : array();
+
+	// course
+	// a list of courses registered by the student
+	$form['programme_holder']['course'] = array(
+		'#type' => 'select',
+		'#title' => t('Course'),
+		'#description' => t('Select the student course'),
+		'#options' => $courses,
+		'#default_value' => $edit['course'],
+		'#ahah' => array(
+			'path' => 'score/ahah/course/callback',
+			'wrapper' => 'course-wrapper',
+			'event' => 'change',
+			),
+		'#required' => TRUE
+		
+	);
+	$form['course_holder'] = array(
+		'#tree' => TRUE,
+		'#prefix' => '<div id="course-wrapper">',
+		'#suffix' => '</div>',
+	);
+
+	$course = isset($edit['course']) ? $edit['course'] : NULL;
+
+	$students = (isset($course) || !empty($course)) ? StudentCourse::listStudentsByRegisteredCourse($course, 'uid') : array(955 => 'Kayode Odeyemi');
+
+	// @todo Lookup profile table using student uids to retrieve matching
+	// firstname and lastname.
+
+	//uid
+	$form['course_holder']['uid'] = array(
+		'#type' => 'select',
+		'#title' => t('Student'),
+		'#description' => t('Select the student to score'),
+		'#options' => $students,
+		'#default_value' => $edit['uid'],
+		'#required' => TRUE
+	);
+	// academicsession
+	$form['academicsession'] = array(
+		'#type' => 'select',
+		'#title' => t('Academic session'),
+		'#description' => t('Select the academic session this score is for.'),
+		'#options' => AcademicSession::listAcademicSession(),
+		'#default_value' => $edit['academicsession'],
+		'#required' => TRUE
+	);
+	$semester = drupal_map_assoc(array(
+		variable_get('first_semester_name', ''),
+		variable_get('second_semester_name', '')
+	));
+	// semester
+	$form['semester'] = array(
+		'#type' => 'select',
+		'#title' => t('Semester'),
+		'#description' => t('Select the academic semester this score is for.'),
+		'#options' => $semester,
+		'#default_value' => $edit['semester'],
+		'#required' => TRUE
+	);
+	$form['ca_score'] = array(
+		'#type' => 'textfield',
+		'#title' => t('CA score'),
+		'#description' => t('Enter CA score. Separate multiple CA scores with a space'),
+		'#default_value' => $edit['ca_score']
+	);
+	$form['exam_score'] = array(
+		'#type' => 'textfield',
+		'#title' => t('Exam score'),
+		'#description' => t('The actual score value'),
+		'#default_value' => $edit['exam_score'],
+	);
+	// overall
+	$form['overall'] = array(
+		'#type' => 'select',
+		'#title' => t('Overall'),
+		'#description' => t('Score total or overall'),
+		'#default_value' => $edit['overall'],
+		'#options' => drupal_map_assoc(range(1, 1000)),
+		'#required' => TRUE
+	);
+  
+	// islocked
+	$form['islocked'] = array(
+		'#type' => 'checkbox',
+		'#title' => t('Locked'),
+		'#description' => t('Whether this score is locked from editing'),
+		'#default_value' => $edit['islocked'],
+	);
+  	$form['submit'] = array(
+		'#type' => 'submit',
+		'#value' => isset($score) ? 'Update' : 'Save',
+		'#attributes' => array('class' => 'btn'),
+	);
+	$form['_score'] = array('#type' => 'value', '#value' => $edit);
+	$form['created'] = array('#type' => 'value', '#value' => time());
+	if(isset($score)) {
+		$form['state'] = array('#type' => 'value', '#value' => 'update');
+		$form['updated'] = array('#type' => 'value', '#value' => time());
+		$form['_loaded'] = array('#type' => 'value', '#value' => $score);
+	}
+
+	return $form;
+}
+
+function college_school_score_form_validate($form, &$form_state) {
+
+}
+
+function college_school_score_form_submit($form, &$form_state) {
+	if (!empty($form_state['ahah_submission'])) {
+		return;
+	}
+	// set testcount = 0
+	$cascores = explode($form_state['values']['ca_score']);
+	$cascore = array_sum($cascores);
+	$score = $form_state['values']['_score'];
+	$score_table = 'score';
+	$loaded = $form_state['values']['_loaded'];
+	$op = $form_state['values']['op'];
+
+	$success = FALSE;
+    if($op == 'Update') {
+    // it's an edit
+		db_query("UPDATE {score} SET uid = %d, programme = %d, course = %d, type = '%s', islocked = %d, semester = '%s', academicsession = '%s', overall = %d, score = %d, cascore = '%s', updated = %d WHERE id = %d", $form_state['values']['course_holder']['uid'], $form_state['values']['programme'], $form_state['values']['programme_holder']['course'], $form_state['values']['type'], $form_state['values']['islocked'], $form_state['values']['semester'], $form_state['values']['academicsession'],
+        $form_state['values']['overall'], $form_state['values']['exam_score'], $form_state['values']['ca_score'], $form_state['values']['updated'], $loaded['id']);
+      
+		$success = TRUE;
+		if($success) {
+		// TODO: grade update score
+		$updated_score = array(
+			'programme' => $form_state['values']['programme'],
+			'course' => $form_state['values']['programme_holder']['course'],
+			'uid' => $form_state['values']['course_holder']['uid'],
+			'islocked' => $form_state['values']['islocked'],
+			'semester' => $form_state['values']['semester'],
+			'academicsession' => $form_state['values']['academicsession'],
+			'overall' => $form_state['values']['overall'],
+			'exam_score' => $form_state['values']['exam_score'],
+			'ca_score' => $form_state['values']['ca_score'],
+			'submittedby' => ''
+		);
+      // module_invoke('acm_school', 'grade_update_score', $form_state['values']);
+		drupal_set_message('Update completed successfully');
+		return;
+	}
+      drupal_set_message('An error occurred while updating Score');
+      return FALSE;
+	}
+
+	if($op == 'Save') {
+    //drupal_write_record($score_table, $form_state['values']);
+		db_query("INSERT INTO {score} (uid, programme, course, islocked, semester, type, academicsession, overall, score, cascore, created) VALUES (%d, %d, %d, %d, '%s', '%s', %d, %d, '%s', %d, %d)", $form_state['values']['course_holder']['uid'], $form_state['values']['programme'], $form_state['values']['programme_holder']['course'], $form_state['values']['islocked'], $form_state['values']['semester'], $form_state['values']['type'],
+		$form_state['values']['academicsession'], $form_state['values']['overall'], $form_state['values']['exam_score'], $form_state['values']['ca_score'], $form_state['values']['created']);  
+
+		$success = TRUE;
+		if($success) {
+      // TODO Invoke hook to grade new Score
+		$new_score = array(
+			'programme' => $form_state['values']['programme'],
+			'course' => $form_state['values']['programme_holder']['course'],
+			'uid' => $form_state['values']['course_holder']['uid'],
+			'islocked' => $form_state['values']['islocked'],
+			'semester' => $form_state['values']['semester'],
+			'academicsession' => $form_state['values']['academicsession'],
+			'overall' => $form_state['values']['overall'],
+			'exam_score' => $form_state['values']['exam_score'],
+			'ca_score' => $form_state['values']['ca_score'],
+			'submittedby' => 0
+		);
+      // grade_new_score
+      drupal_set_message('Score created successfully');
+    }
+  }
+}
+/**
+ * Implementation of hook_views_api(), register view API information so include files can be loaded
+ */
+function college_school_views_api() {
+  return array(
+    'api' => 2,
+    'path' => drupal_get_path('module', 'college_school') . '/views',
+  );
+}
