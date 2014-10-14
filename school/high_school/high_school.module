@@ -447,7 +447,7 @@ function high_school_grade_wes() {
  * Computes student's current GPA. Computes student's GPA
  * for the current semester/session
  */
-function uni_school_compute_current_gpa($uid, $latest_score) {
+function high_school_compute_current_gpa($uid, $latest_score) {
   // get the current grade system and switch on that.
   // get current semester or session.
   // get the courses taken by the student in that semester.
@@ -719,7 +719,7 @@ function high_school_admission_application_info() {
     // to be implemented
     /*'examresults' => array(
       'title' => 'examresults',
-      'form_id' => 'uni_school_admission_examresults_form'
+      'form_id' => 'high_school_admission_examresults_form'
     )*/
   );
   return $application_form;
@@ -732,10 +732,10 @@ function high_school_admission_form_id() {
   return 'high_school_admission_form';
 }
 
-//function uni_school_admission_course_edit($course_info) {
+//function high_school_admission_course_edit($course_info) {
   //$course_info->course['state'] = 'edit';
-  //return uni_school_admission_course_form($profile->profile);
-  //return drupal_get_form('uni_school_admission_course_form', $course_info, NULL, NULL);
+  //return high_school_admission_course_form($profile->profile);
+  //return drupal_get_form('high_school_admission_course_form', $course_info, NULL, NULL);
 //}
 
 function high_school_admission_course_form(&$form_state, $course_info, $steps_order, $hook) {
@@ -870,7 +870,7 @@ function high_school_admission_sponsors_form_submit($form, &$form_state) {
 /**
  * Save or update sponsors_info 
  */
-function uni_school_sponsors_save() {
+function high_school_sponsors_save() {
   
 }
 
