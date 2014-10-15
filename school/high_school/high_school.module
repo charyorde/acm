@@ -1153,3 +1153,211 @@ function high_school_admission_applications_list() {
  * 
  * @param type $uid 
  */
+function high_school_admission_course_load($uid) {
+  
+}
+/**
+ * course_info(id) and uid are loaded from uri due to calls to
+ * high_school_course_load and acm_school_profile_load
+ * 
+ * @param type $course 
+ */
+function high_school_admission_course_edit($uid) {
+    // load the course_info object by calling high_school_course_load
+    $course_info = high_school_admission_course_load($uid);
+    return drupal_get_form('high_school_admission_course_form', $course_info, NULL, NULL); 
+}
+
+/**
+ * Load course_info object from db
+ *
+ * @deprecated
+ * @see high_school_admission_course_load
+ */
+function high_school_course_load($uid) {
+
+}
+
+/**
+ * Implements hook_academic_level
+ */
+function high_school_academic_level() {
+    return drupal_map_assoc(array(100, 200, 300, 400, 500, 600, 700));
+}
+
+/**
+ * Implements hook_student_course
+ */
+function high_school_student_course() {
+
+  drupal_set_title('Course');
+  $studentCourses = views_get_view('student_course');
+  $studentCourses->display = 'high_school_student_course';
+
+  return $studentCourses;
+}
+
+/**
+ * Implements hook_score_settings
+ *
+ */
+function high_school_score_settings($type) {
+  $settings['type'] = 'score';
+  if($type == 'add') {
+    $settings['score']['score_form'] = drupal_get_form('high_school_score_form');
+  }
+
+  return $settings;
+}
+function high_school_score_form(&$form_state, $score = NULL, $edit = NULL) {
+
+  $edit = (empty($form_state['values'])) ? (array)$score : $form_state['values'];
+  //dsm($edit);
+  if($edit) {
+    //TODO: drupal js here to tell client-side that it's edit.
+    drupal_add_js(array('score' => array('context' => 'score-form-edit')), 'setting');
+    drupal_set_title('Edit Score');
+  }else {
+    drupal_set_title('Add Score');
+  }
+
+  $form['#attributes'] = array('class' => 'form-horizontal');
+  $subjects = isset($subject) ? Subject::listStudentsByRegisteredSubject($subjects) : array();
+  
+   $form['course_holder']['subject'] = array(
+    '#type' => 'select',
+    '#title' => t('Subject'),
+    '#description' => t('Select the student subject'),
+    '#options' => $subjects,
+    '#default_value' => $edit['subject'],
+    '#ahah' => array(
+      'path' => 'score/ahah/subject/callback',
+      'wrapper' => 'subject-wrapper',
+      'event' => 'change', // default value: does not need to be set explicitly.
+    '#required' => TRUE
+    )
+  );
+  
+  $students = (isset($subject) || !empty($subject)) ? StudentSubject::listStudentsByRegisteredSubject($subject, 'uid') : array(955 => 'Kayode Odeyemi');
+
+  // @todo Lookup profile table using student uids to retrieve matching
+  // firstname and lastname.
+
+  //uid
+  $form['course_holder']['uid'] = array(
+    '#type' => 'select',
+    '#title' => t('Student'),
+    '#description' => t('Select the student to score'),
+    '#options' => $students,
+    '#default_value' => $edit['uid'],
+    '#required' => TRUE
+  );
+  $form['academicsession'] = array(
+    '#type' => 'select',
+    '#title' => t('Academic session'),
+    '#description' => t('Select the academic session this score is for.'),
+    '#options' => AcademicSession::listAcademicSession(),
+    '#default_value' => $edit['academicsession'],
+    '#required' => TRUE
+  );
+  $form['exam_score'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Exam score'),
+    '#description' => t('The actual score value'),
+    '#default_value' => $edit['exam_score'],
+  );
+  // islocked
+  $form['islocked'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Locked'),
+    '#description' => t('Whether this score is locked from editing'),
+    '#default_value' => $edit['islocked'],
+  );
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => isset($score) ? 'Update' : 'Save',
+    '#attributes' => array('class' => 'btn'),
+  );
+ 
+  $form['_score'] = array('#type' => 'value', '#value' => $edit);
+  $form['created'] = array('#type' => 'value', '#value' => time());
+  if(isset($score)) {
+      $form['state'] = array('#type' => 'value', '#value' => 'update');
+      $form['updated'] = array('#type' => 'value', '#value' => time());
+      $form['_loaded'] = array('#type' => 'value', '#value' => $score);
+  }
+  return $form;
+}
+function high_school_score_form_validate($form, &$form_state) {
+
+}
+function high_school_score_form_submit($form, &$form_state) {
+  //dsm($form_state['values']);
+  if (!empty($form_state['ahah_submission'])) {
+    //dsm($form_state['values']);
+    return;
+  }
+  // set testcount = 0
+  $score = $form_state['values']['_score'];
+  $score_table = 'score';
+  $loaded = $form_state['values']['_loaded'];
+  $op = $form_state['values']['op'];
+
+  $success = FALSE;
+    if($op == 'Update') {
+    // it's an edit
+      db_query("UPDATE {score} SET uid = %d, course = %d, islocked = %d, academicsession = '%s', score = %d, updated = %d WHERE id = %d", $form_state['values']['course_holder']['uid'],$form_state['values']['course_holder']['subject']  $form_state['values']['islocked'],  $form_state['values']['academicsession'], $form_state['values']['exam_score'],  $form_state['values']['updated'], $loaded['id']);
+      
+    $success = TRUE;
+    if($success) {
+      // TODO: grade update score
+      $updated_score = array(
+       
+        'course' => $form_state['values']['course_holder']['subject'],
+        'uid' => $form_state['values']['course_holder']['uid'],
+        'islocked' => $form_state['values']['islocked'],
+        'academicsession' => $form_state['values']['academicsession'],
+        'exam_score' => $form_state['values']['exam_score'],
+        'submittedby' => ''
+      );
+      // module_invoke('acm_school', 'grade_update_score', $form_state['values']);
+      drupal_set_message('Update completed successfully');
+      return;
+    }
+      drupal_set_message('An error occurred while updating Score');
+      return FALSE;
+  }
+
+  if($op == 'Save') {
+    //drupal_write_record($score_table, $form_state['values']);
+    db_query("INSERT INTO {score} (uid, course, islocked, academicsession, score, created) VALUES (%d, %d, %d, %s, %d, %d)", $form_state['values']['course_holder']['uid'],  $form_state['values']['course_holder']['subject'], $form_state['values']['islocked'], 
+      $form_state['values']['academicsession'], $form_state['values']['exam_score'],$form_state['values']['created']);  
+
+    $success = TRUE;
+    if($success) {
+      // TODO Invoke hook to grade new Score
+      $new_score = array(
+       
+        'course' => $form_state['values']['course_holder']['subject'],
+        'uid' => $form_state['values']['course_holder']['uid'],
+        'islocked' => $form_state['values']['islocked'],
+        'academicsession' => $form_state['values']['academicsession'],
+        'exam_score' => $form_state['values']['exam_score'],
+        'submittedby' => 0
+      );
+      // grade_new_score
+      drupal_set_message('Score created successfully');
+    }
+  }
+}
+
+/**
+ * Implementation of hook_views_api(), register view API information so include files can be loaded
+ */
+function high_school_views_api() {
+  return array(
+    'api' => 2,
+    'path' => drupal_get_path('module', 'high_school') . '/views',
+  );
+}
+
