@@ -37,14 +37,7 @@ function high_school_menu() {
 		'access callback' => TRUE,
 		'access arguments' => array('')
 	);
-	$items['admission/apply/examresults'] = array(
-		'title' => t('Application to [School name]'),
-		'description' => t('Student application for admission to a school'),
-		'page callback' => 'drupal_get_form',
-		'page arguments' => array('high_school_admission_examresults_form'),
-		'access callback' => TRUE,
-		'access arguments' => array('')
-	);
+	
 	// edit a student grade
 	$items['admin/settings/school/grade/%acm_school_grade/edit'] = array(
 		'title' => t('Edit grade'),
@@ -1051,53 +1044,11 @@ function high_school_health_save() {
  * @return string 
  */
 function high_school_admission_examresults_form(&$form_state, $profile, $steps_order, $hook) {
-  $form['#attributes'] = array('class' => 'form-horizontal');
-  $form['examresults'] = array(
-    '#type' => 'markup',
-    '#value' => '<div style="background:#f6f6f2; padding:5px">Academic results</div>',
-  );
-  $form['subject'] = array(
-    '#type' => 'textfield',
-    '#title' => t('Subject'),
-    '#default_value' => variable_get('level', ''),
-    //'#required' => TRUE,
-  );
-  $form['grade'] = array(
-    '#type' => 'textfield',
-    '#title' => t('Grade'),
-    '#default_value' => variable_get('programme', ''), 
-    //'#required' => TRUE,
-  );
-  $form['institution'] = array(
-    '#type' => 'textfield',
-    '#title' => t('Institution'),
-    '#default_value' => variable_get('modeofentry', ''), 
-    //'#required' => TRUE,
-  );
-  $form['qualification'] = array(
-    '#type' => 'textfield',
-    '#title' => t('Qualification'),
-    '#default_value' => variable_get('matric_no', ''),
-  );
-  $form['submit'] = array(
-    '#type' => 'submit',
-    '#value' => 'Save',
-    '#attributes' => array('class' => 'btn')
-  );
   
-  $form['_current'] = array('#type' => 'value', '#value' => $hook);
-  $form['_next'] = array('#type' => 'value', '#value' => 'finished');
-  $form['_steps'] = array('#type' => 'value', '#value' => $steps_order);
-  
-  return $form;
 }
 
 function high_school_admission_examresults_form_submit($form, &$form_state) {
-  $current = $form_state['values']['_current'];
-  $steps = $form_state['values']['_steps'];
-  $next = $form_state['values']['_next'];
-  drupal_goto('admission/apply', 'step=' . $next);
-  
+ 
   //return $form_state['redirect'] = 'admission/apply/examresults';
 }
 
