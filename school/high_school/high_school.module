@@ -186,7 +186,7 @@ function high_school_faculty_settings($type) {
 		'callback url' => 'teacher'
 	);
 	if($type == 'add') {
-		$settings['teacher']['add_teacher_form'] = drupal_get_form('proschool_teacher_form');
+		$settings['teacher']['add_teacher_form'] = drupal_get_form('high_school_teacher_form');
 	}
   
   return $settings;
