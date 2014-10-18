@@ -36,13 +36,13 @@ function proschool_menu(){
 		'access callback' => TRUE,
 		'access arguments' => array('')
 	);
-	// 
-	$items['admin/settings/school/subject/%acm_school_course/edit'] = array(
-		'title' => t('Configure Subject'),
+	// edit a student subject
+	$items['admin/settings/school/subject/%acm_school_subject/edit'] = array(
+		'title' => t('Configure subject'),
 		'description' => t('School subject settings'),
 		'page callback' => 'drupal_get_form',
 		'page arguments' => array('proschool_addsubject_form', 4),
-		'access arguments' => array('administer course settings'),
+		'access arguments' => array('administer subject settings'),
 		'type' => MENU_CALLBACK,
 		'load arguments' => array(4)
     );
@@ -82,7 +82,12 @@ function proschool_acm_roles() {
  * Assigns permission(s) to role(s) 
  */
 function proschool_acm_roles_perm() {
-  
+	return array(
+		'Head teacher' => 'administer school settings',
+		'Head teacher' => 'view student application',
+		'Head teacher' => 'view student applications', // view all student applications
+		'Head teacher' => 'setup school',
+	);
 }
 /**
  * Implements hook_school_settings 
@@ -192,7 +197,7 @@ function proschool_faculty_settings($type) {
   return $settings;
 }
 /**
- * Faculty add and edit form
+ * Teacher add and edit form
  * 
  * @param type $form_state
  * @param type $edit
@@ -206,7 +211,6 @@ function proschool_teacher_form(&$form_state, $teacher = NULL, $edit = NULL) {
 	}else {
 		drupal_set_title('Add teacher');
 	}
-
 	$form['#attributes'] = array('class' => 'form-horizontal');
 	$form['name'] = array(
 		'#type' => 'textfield',
@@ -271,15 +275,14 @@ function proschool_teacher_form_validate($form, &$form_state) {
 
     $op = $form_state['values']['op'];
     if($op != 'Update') {
-        // does faculty name exist?
+        // does teacher name exist?
         if(in_array($teacher_name, Faculty::listFaculty($fields))) {
             form_error($form['name'], t('The teacher, @name already exist', array('@name' => $teacher_name)));
         }
-        // does faculty_code exist?
+        // does teacher_code exist?
         if(in_array($teacher_code, Faculty::listFaculty($fields))) {
             form_error($form['code'], t('The teacher code, @code already exist', array('@code' => $teacher_code)));
         }
-    
     }
 }
 function proschool_teacher_form_submit($form, &$form_state) {
@@ -290,12 +293,10 @@ function proschool_teacher_form_submit($form, &$form_state) {
 	$form_state['values']['created'] = $created;*/
   
 	$teacher_table = 'faculty';
-  
 	$success = FALSE;
-  
 	if(!empty($teacher)) {
 	// it's an edit
-	//$success = drupal_write_record($faculty_table, $faculty, 'id');
+	//$success = drupal_write_record($teacher_table, $faculty, 'id');
 		db_query("UPDATE {faculty} SET name = '%s', facultycode ='%s', description = '%s', emailsubdomain = '%s', updated = %d WHERE id = %d", $form_state['values']['name'], $form_state['values']['teachercode'], $form_state['values']['description'], $form_state['values']['emailsubdomain'], $form_state['values']['updated'], $loaded['id']);
 	  $success = TRUE;
 	if($success) {
@@ -316,15 +317,13 @@ function proschool_teacher_form_submit($form, &$form_state) {
 function proschool_teacher_subj_form(&$form_state, $dept = NULL, $edit = NULL) {
 	// assign teacher for a subject
 }
-
 /**
  * Validate teacher for a subject
  */
-function proschool_teacher_sub_form_validate($form, &$form_state) {
+function proschool_teacher_subj_form_validate($form, &$form_state) {
 	// validate teacher for a subject
 }
-
-function proschool_teacher_sub_form_submit($form, &$form_state) {
+function proschool_teacher_subj_form_submit($form, &$form_state) {
     // submit code
 }
 
@@ -614,6 +613,12 @@ function proschool_grade_form(&$form_state, $grade = NULL, $edit = NULL ) {
 		'#default_value' => $edit['exam_score_id'],
 		'#required' => TRUE 
 	);
+	$form['totalscore'] = array(
+		'#type' => 'textfield',
+		'#title' => t('Total score'),
+		'#description' => t('Total score (exam score)'),
+		'#default_value' => $edit['totalscore']
+	);
 	$form['submittedby'] = array(
 		'#type' => 'select',
 		'#title' => t('Submitted by'),
@@ -635,7 +640,6 @@ function proschool_grade_form(&$form_state, $grade = NULL, $edit = NULL ) {
 		'#description' => t('Whether this grade has been approved or not'),
 		'#default_value' => $edit['approved']
 	);
-  
 	$form['submit'] = array(
 		'#type' => 'submit',
 		'#value' => isset($score) ? 'Update' : 'Save',
@@ -691,7 +695,7 @@ function proschool_grade() {
  * Implements hook_fees 
  */
 function proschool_fees() {
-	//not needed
+	
 }
 
 /**
@@ -734,10 +738,10 @@ function proschool_acm_student_application() {
 		$studentApplication = views_get_view('uni_student_application_view');
 		$studentApplication->display = 'sponsor';
 	break;
-    case 'course':
-		drupal_set_title('Course');
+    case 'class':
+		drupal_set_title('Class');
         $studentApplication = views_get_view('uni_student_application_view');
-        $studentApplication->display = 'course';
+        $studentApplication->display = 'class';
     break;
     case 'nextofkin':
 		drupal_set_title('Next of Kin');
@@ -760,8 +764,8 @@ function proschool_student_application_items() {
 	$items['sponsor'] = array(
 		'data' => l('Sponsor Information', 'application/sponsor')
 	);
-	$items['course'] = array(
-		'data' => l('Course Information', 'application/course')
+	$items['class'] = array(
+		'data' => l('Class Information', 'application/class')
 	);
 	return $items;
 }
@@ -886,7 +890,7 @@ function proschool_admission_class_form_submit($form, &$form_state) {
 /**
  * Saves or update course_info 
  */
-function proschool_course_info_save() {
+function proschool_class_info_save() {
   
 }
 
@@ -1301,7 +1305,7 @@ function proschool_admission_applications_list() {
 }
 
 /**
- * Loads the current user course_info object
+ * Loads the current user class_info object
  * 
  * User must have role Student
  * 
@@ -1339,7 +1343,11 @@ function proschool_academic_level() {
  * Implements hook_student_course
  */
 function proschool_student_class() {
+	drupal_set_title('Class');
+	$studentCourses = views_get_view('student_class');
+	$studentCourses->display = 'proschool_student_class';
 
+  return $studentCourses;
 }
 /**
  * Implements hook_score_settings
@@ -1369,37 +1377,34 @@ function proschool_score_form(&$form_state, $score = NULL, $edit = NULL) {
 	}else {
 		drupal_set_title('Add Score');
 	}
-	$form['programme_holder'] = array(
+	$form['class_holder'] = array(
 		'#tree' => TRUE,
 		'#prefix' => '<div id="programme-wrapper">',
 		'#suffix' => '</div>',
 	);
-
-	$classes = isset($programme) ? Course::getCoursesByProgramme($programme) : array();
-	// class
-	// a list of classes registered by the student
-	$form['programme_holder']['class'] = array(
+	$form['#attributes'] = array('class' => 'form-horizontal');
+	$subjects = isset($subject) ? Subject::listStudentsByRegisteredSubject($subjects) : array();
+  
+	$form['class_holder']['subject'] = array(
 		'#type' => 'select',
-		'#title' => t('Class'),
-		'#description' => t('Select the student class'),
-		'#options' => $classes,
-		'#default_value' => $edit['course'],
+		'#title' => t('Subject'),
+		'#description' => t('Select the student subject'),
+		'#options' => $subjects,
+		'#default_value' => $edit['subject'],
 		'#ahah' => array(
-		  'path' => 'score/ahah/course/callback',
-		  'wrapper' => 'course-wrapper',
+		  'path' => 'score/ahah/subject/callback',
+		  'wrapper' => 'subject-wrapper',
 		  'event' => 'change', // default value: does not need to be set explicitly.
 		'#required' => TRUE
 		)
 	);
-	$form['class_holder'] = array(
-		'#tree' => TRUE,
-		'#prefix' => '<div id="course-wrapper">',
-		'#suffix' => '</div>',
-	);
-	$class = isset($edit['course']) ? $edit['course'] : NULL;
+  
+	$students = (isset($subject) || !empty($subject)) ? StudentSubject::listStudentsByRegisteredSubject($subject, 'uid') : array(955 => 'Kayode Odeyemi');
 
-	$students = (isset($class) || !empty($class)) ? StudentCourse::listStudentsByRegisteredCourse($class, 'uid') : array(955 => 'Kayode Odeyemi');
+	// @todo Lookup profile table using student uids to retrieve matching
+	// firstname and lastname.
 
+	//uid
 	$form['class_holder']['uid'] = array(
 		'#type' => 'select',
 		'#title' => t('Student'),
@@ -1408,7 +1413,6 @@ function proschool_score_form(&$form_state, $score = NULL, $edit = NULL) {
 		'#default_value' => $edit['uid'],
 		'#required' => TRUE
 	);
-  // academicsession
 	$form['academicsession'] = array(
 		'#type' => 'select',
 		'#title' => t('Academic session'),
@@ -1423,15 +1427,6 @@ function proschool_score_form(&$form_state, $score = NULL, $edit = NULL) {
 		'#description' => t('The actual score value'),
 		'#default_value' => $edit['exam_score'],
 	);
-	// overall
-	$form['overall'] = array(
-		'#type' => 'select',
-		'#title' => t('Overall'),
-		'#description' => t('Score total or overall'),
-		'#default_value' => $edit['overall'],
-		'#options' => drupal_map_assoc(range(1, 1000)),
-		'#required' => TRUE
-	);
 	// islocked
 	$form['islocked'] = array(
 		'#type' => 'checkbox',
@@ -1444,6 +1439,7 @@ function proschool_score_form(&$form_state, $score = NULL, $edit = NULL) {
 		'#value' => isset($score) ? 'Update' : 'Save',
 		'#attributes' => array('class' => 'btn'),
 	);
+ 
 	$form['_score'] = array('#type' => 'value', '#value' => $edit);
 	$form['created'] = array('#type' => 'value', '#value' => time());
 	if(isset($score)) {
@@ -1461,8 +1457,8 @@ function proschool_score_form_validate($form, &$form_state) {
 function proschool_score_form_submit($form, &$form_state) {
 	//dsm($form_state['values']);
 	if (!empty($form_state['ahah_submission'])) {
-	//dsm($form_state['values']);
-	return;
+    //dsm($form_state['values']);
+		return;
 	}
 	// set testcount = 0
 	$score = $form_state['values']['_score'];
@@ -1472,43 +1468,41 @@ function proschool_score_form_submit($form, &$form_state) {
 
 	$success = FALSE;
     if($op == 'Update') {
-		// it's an edit
-		db_query("UPDATE {score} SET uid = %d, course = %d, islocked = %d,  academicsession = '%s', overall = %d, score = %d, updated = %d WHERE id = %d", $form_state['values']['course_holder']['uid'],  $form_state['values']['programme_holder']['class'], $form_state['values']['islocked'], $form_state['values']['academicsession'], $form_state['values']['overall'], $form_state['values']['exam_score'], $form_state['values']['updated'], $loaded['id']);
-
-    $success = TRUE;
-    if($success) {
+    // it's an edit
+		db_query("UPDATE {score} SET uid = %d, course = %d, islocked = %d, academicsession = '%s', score = %d, updated = %d WHERE id = %d", $form_state['values']['course_holder']['uid'],$form_state['values']['course_holder']['subject']  $form_state['values']['islocked'],  $form_state['values']['academicsession'], $form_state['values']['exam_score'],  $form_state['values']['updated'], $loaded['id']);
+      
+		$success = TRUE;
+		if($success) {
 		// TODO: grade update score
-		$updated_score = array(
-		'course' => $form_state['values']['programme_holder']['class'],
-		'uid' => $form_state['values']['course_holder']['uid'],
-		'islocked' => $form_state['values']['islocked'],
-		'academicsession' => $form_state['values']['academicsession'],
-		'overall' => $form_state['values']['overall'],
-		'exam_score' => $form_state['values']['exam_score'],
-		'submittedby' => ''
-		);
+			$updated_score = array(
+       		'course' => $form_state['values']['course_holder']['subject'],
+			'uid' => $form_state['values']['course_holder']['uid'],
+			'islocked' => $form_state['values']['islocked'],
+			'academicsession' => $form_state['values']['academicsession'],
+			'exam_score' => $form_state['values']['exam_score'],
+			'submittedby' => ''
+			);
 		// module_invoke('acm_school', 'grade_update_score', $form_state['values']);
 		drupal_set_message('Update completed successfully');
 		return;
-    }
-	drupal_set_message('An error occurred while updating Score');
-	return FALSE;
-  }
+		}
+		drupal_set_message('An error occurred while updating Score');
+		return FALSE;
+	}
 
 	if($op == 'Save') {
 		//drupal_write_record($score_table, $form_state['values']);
-		db_query("INSERT INTO {score} (uid, course, islocked, academicsession, overall, score, created) VALUES (%d, %d, %d, %s', %d, %d)", $form_state['values']['course_holder']['uid'],  $form_state['values']['programme_holder']['class'], $form_state['values']['islocked'], 
-		$form_state['values']['academicsession'], $form_state['values']['overall'], $form_state['values']['exam_score'], $form_state['values']['created']);  
+		db_query("INSERT INTO {score} (uid, course, islocked, academicsession, score, created) VALUES (%d, %d, %d, %s, %d, %d)", $form_state['values']['course_holder']['uid'],  $form_state['values']['course_holder']['subject'], $form_state['values']['islocked'], 
+		$form_state['values']['academicsession'], $form_state['values']['exam_score'],$form_state['values']['created']);  
 
-    $success = TRUE;
-    if($success) {
-      // TODO Invoke hook to grade new Score
-      $new_score = array(
-        'course' => $form_state['values']['programme_holder']['class'],
+	$success = TRUE;
+	if($success) {
+		// TODO Invoke hook to grade new Score
+		$new_score = array(
+        'course' => $form_state['values']['course_holder']['subject'],
         'uid' => $form_state['values']['course_holder']['uid'],
         'islocked' => $form_state['values']['islocked'],
         'academicsession' => $form_state['values']['academicsession'],
-        'overall' => $form_state['values']['overall'],
         'exam_score' => $form_state['values']['exam_score'],
         'submittedby' => 0
       );
@@ -1517,7 +1511,6 @@ function proschool_score_form_submit($form, &$form_state) {
     }
   }
 }
-
 /**
  * Implementation of hook_views_api(), register view API information so include files can be loaded
  */
