@@ -5,48 +5,76 @@
 function nurspri_school_menu() {
   $items = array();
   // menu is only available if this module is enabled
-  $items['admission/apply/course'] = array(
-    'title' => t('Application to [School name]'),
-    'description' => t('Student application for admission to a school'),
-    'page callback' => 'drupal_get_form',
-    'page arguments' => array('nurspri_school_admission_course_form'),
-    'access arguments' => array(''), // edit admission form 
-    'access callback' => TRUE 
-  );
-  $items['admission/apply/sponsor'] = array(
-    'title' => t('Application to [School name]'),
-    'description' => t('Student application for admission to a school'),
-    'page callback' => 'drupal_get_form',
-    'page arguments' => array('nurspri_school_admission_sponsors_form'), // function callback
-    'access arguments' => array(''), // edit admission form 
-    'access callback' => TRUE // remove if access arguments is set
-  );
-  $items['admission/apply/nextofkin'] = array(
-    'title' => t('Application to [School name]'),
-    'description' => t('Student application for admission to a school'),
-    'page callback' => 'drupal_get_form',
-    'page arguments' => array('nurspri_school_admission_nextofkin_form'), // function callback
-    'access arguments' => array(''), // edit admission form
-    'access callback' => TRUE // remove if access arguments is set
-  ); 
-  $items['admission/apply/health'] = array(
-    'title' => t('Application to [School name]'),
-    'description' => t('Student application for admission to a school'),
-    'page callback' => 'drupal_get_form',
-    'page arguments' => array('nurspri_school_admission_health_form'), // function callback
-    'access arguments' => array(''), // edit admission form
-    'access callback' => TRUE // remove if access arguments is set
-  );
-  $items['admission/apply/examresults'] = array(
-    'title' => t('Application to [School name]'),
-    'description' => t('Student application for admission to a school'),
-    'page callback' => 'drupal_get_form',
-    'page arguments' => array('nurspri_school_admission_examresults_form'), // function callback
-    'access arguments' => array(''), // edit admission form
-    'access callback' => TRUE // remove if access arguments is set
-  ); 
+	$items['admission/apply/class'] = array(
+		'title' => t('Application to [School name]'),
+		'description' => t('Student application for admission to a school'),
+		'page callback' => 'drupal_get_form',
+		'page arguments' => array('nurspri_school_admission_class_form'),
+		'access arguments' => array(''), // edit admission form 
+		'access callback' => TRUE 
+	);
+	$items['admission/apply/sponsor'] = array(
+		'title' => t('Application to [School name]'),
+		'description' => t('Student application for admission to a school'),
+		'page callback' => 'drupal_get_form',
+		'page arguments' => array('nurspri_school_admission_sponsors_form'), // function callback
+		'access arguments' => array(''), // edit admission form 
+		'access callback' => TRUE // remove if access arguments is set
+	);
+	$items['admission/apply/nextofkin'] = array(
+		'title' => t('Application to [School name]'),
+		'description' => t('Student application for admission to a school'),
+		'page callback' => 'drupal_get_form',
+		'page arguments' => array('nurspri_school_admission_nextofkin_form'), // function callback
+		'access arguments' => array(''), // edit admission form
+		'access callback' => TRUE // remove if access arguments is set
+	); 
+	$items['admission/apply/health'] = array(
+		'title' => t('Application to [School name]'),
+		'description' => t('Student application for admission to a school'),
+		'page callback' => 'drupal_get_form',
+		'page arguments' => array('nurspri_school_admission_health_form'), // function callback
+		'access arguments' => array(''), // edit admission form
+		'access callback' => TRUE // remove if access arguments is set
+	);
+	$items['admission/apply/examresults'] = array(
+		'title' => t('Application to [School name]'),
+		'description' => t('Student application for admission to a school'),
+		'page callback' => 'drupal_get_form',
+		'page arguments' => array('nurspri_school_admission_examresults_form'), // function callback
+		'access arguments' => array(''), // edit admission form
+		'access callback' => TRUE // remove if access arguments is set
+	); 
+	// edit a student subject
+	$items['admin/settings/school/subject/%acm_school_subject/edit'] = array(
+		'title' => t('Configure subject'),
+		'description' => t('School subject settings'),
+		'page callback' => 'drupal_get_form',
+		'page arguments' => array('nurspri_school_addsubject_form', 4),
+		'access arguments' => array('administer subject settings'),
+		'type' => MENU_CALLBACK,
+		'load arguments' => array(4)
+    );
+	// edit a student grade
+	$items['admin/settings/school/grade/%acm_school_grade/edit'] = array(
+		'title' => t('Edit grade'),
+		'description' => t('Edit a student grade'),
+		'page callback' => 'drupal_get_form',
+		'page arguments' => array('nurspri_school_grade_form', 4),
+		'type' => MENU_CALLBACK,
+		'load arguments' => array(4)
+	);
+	// edit a student score
+	$items['admin/settings/school/score/%acm_school_score/edit'] = array(
+		'title' => t('Edit score'),
+		'description' => t('Edit a student score'),
+		'page callback' => 'drupal_get_form',
+		'page arguments' => array('nurspri_school_score_form', 4),
+		'type' => MENU_CALLBACK,
+		'load arguments' => array(4)
+	);
+	return $items;
  
-  return $items;
 }
 /**
  * Implements hook_acm_roles 
@@ -54,8 +82,7 @@ function nurspri_school_menu() {
  * Defines default roles needed in a nursery for school module
  */
 function nurspri_school_acm_roles(){
-  return array ();
-  //return array('Role1', 'Role2');
+	return array ();
 }
 /**
  * Implements hook_acm_roles_perm
@@ -63,47 +90,59 @@ function nurspri_school_acm_roles(){
  * Assigns permission(s) to role(s) 
  */
 function nurspri_school_acm_roles_perm(){
-  return array ();
-  //return array('Staff' => 'setup school','Student' => 'register course');
+	return array('Head teacher');
 }
 /**
  * Implements hook_school_setting 
  */
 function nurspri_school_school_settings() {
   $settings['type'] = 'configure';
-  // General configuration
-  $settings['configure']['admission'] = array(
-    'title' => t('Set admission status'),
-    'callback url' => t('admin/settings/school/admission/status')
-  );
-  $settings['configure']['users'] = array(
-    'title' => 'Configure users',
-    'callback url' => 'admin/settings/school/users'
-  );
-  $settings['configure']['fees'] = array(
-    'title' => 'Setup Fees',
-    'callback url' => 'admin/settings/school/fees'
-  );
- 
-  return $settings;
+	$settings['configure']['admission'] = array(
+		'title' => t('Set admission status'),
+		'callback url' => 'admin/settings/school/admission/status'
+	);
+	$settings['configure']['users'] = array(
+		'title' => t('Configure users'),
+		'callback url' => 'admin/settings/school/users'
+	);
+	$settings['configure']['fees'] = array(
+		'title' => t('Configure fees'),
+		'callback url' => 'admin/settings/school/fees'
+	);
+	$settings['configure']['teacher'] = array(
+		'title' => 'Add teacher',
+		'callback url' => 'admin/settings/school/teacher/add'
+	);
+	$settings['configure']['grade'] = array(
+		'title' => t('Configure grade system'),
+		'callback url' => 'admin/settings/school/grade/gradingsystem'
+	);
+	
+	$settings['configure']['school_settings'] = drupal_get_form('nurspri_school_school_settings_form'); 
+	
+	return $settings;
+}
+function nurspri_school_school_settings_form() {
+	$form['#attributes'] = array('class' => 'form-horizontal');
+	return system_settings_form($form);
 }
 /**
  * Implements hook_admission_settings 
  */
 function nurspri_school_admission_settings($type) {
-  $settings['type'] = 'admission';
-  $settings['admission']['configure'] = array(
-    'title' => 'Configure',
-    'callback url' => 'admin/settings/school/'
-  );
-  $settings['admission']['view applications'] = array(
-    'title' => 'View applications',
-    'callback url' => 'admission/applications'
-  );
-  if($type == 'status') {
-    $settings['admission']['admission_status_form'] = drupal_get_form('nurspri_school_admission_settings_form');
-  }
-  return $settings;
+	$settings['type'] = 'admission';
+	$settings['admission']['configure'] = array(
+		'title' => 'Configure',
+		'callback url' => 'admin/settings/school/'
+	);
+	$settings['admission']['view applications'] = array(
+		'title' => 'View applications',
+		'callback url' => 'admission/applications'
+	);
+	if($type == 'status') {
+		$settings['admission']['admission_status_form'] = drupal_get_form('nurspri_school_admission_settings_form');
+	}
+	return $settings;
 }
 function nurspri_school_admission_settings_form(&$form_state) {
   $form['#attributes'] = array('class' => 'form-horizontal');
@@ -133,13 +172,175 @@ function nurspri_school_admission_settings_form_submit($form, &$form_state) {
  * implements hook_term_type
  */
 function nurspri_school_term_type() {
-return array();
+	return array('term_type', 'Annual');
 }
+/**
+ * Implements hook_faculty_settings 
+ */
+function nurspri_school_faculty_settings($type) {
+	$settings['type'] = 'teacher';
+	$settings['teacher']['add'] = array(
+		'title' => t('Add'),
+		'callback url' => 'admin/settings/school/teacher/add'
+	);
+	$settings['teacher']['view'] = array(
+		'title' => 'View teacher',
+		'callback url' => 'teacher'
+	);
+	if($type == 'add') {
+		$settings['teacher']['add_teacher_form'] = drupal_get_form('nurspri_school_teacher_form');
+	}
+  
+  return $settings;
+}
+/**
+ * Teacher add and edit form
+ * 
+ * @param type $form_state
+ * @param type $edit
+ * @return boolean 
+ */
+function nurspri_school_teacher_form(&$form_state, $teacher = NULL, $edit = NULL) {
+	$edit = (empty($form_state['values'])) ? (array)$teacher : $form_state['values'];
+
+	if($edit) {
+		drupal_set_title('Edit teacher');
+	}else {
+		drupal_set_title('Add teacher');
+	}
+
+	$form['#attributes'] = array('class' => 'form-horizontal');
+	$form['name'] = array(
+		'#type' => 'textfield',
+		'#title' => t('Name'),
+		'#default_value' => $edit['name'],
+		'#required' => TRUE,
+		'#attributes' => array('class' => 'faculty-name'),
+	);
+	$form['machine_name'] = array(
+		'#type' => 'textfield',
+		'#title' => t('Machine-readable name'),
+		'#description' => t('Example: social_science'). '<br/>' .t('May only contain lowercase letters, numbers and underscores. <strong>Try to avoid conflicts with the names of existing modules.</strong>'),
+		'#required' => TRUE,
+		'#default_value' => $edit['machine_name'],
+		'#attributes' => array('class' => 'faculty-name-machine'),
+		'#element_validate' => array('acm_school_settings_validate_field'),
+	);
+	// If recreating this feature, disable machine name field and blank out
+	// js-attachment classes to ensure the machine name cannot be changed.
+	if (isset($edit)) {
+		$form['machine_name']['#value'] = $edit['name'];
+		$form['machine_name']['#disabled'] = TRUE;
+		$form['machine_name']['#attributes'] = array();
+	}
+	$form['description'] = array(
+		'#type' => 'textfield',
+		'#title' => t('Description'),
+		'#default_value' => $edit['description']
+	);
+	$form['teachercode'] = array(
+		'#type' => 'textfield',
+		'#title' => t('Teacher code'),
+		'#default_value' => $edit['teachercode'],
+		'#required' => TRUE
+	);
+	$form['emailsubdomain'] = array(
+		'#type' => 'textfield',
+		'#title' => t('Email subdomain'),
+		'#default_value' => $edit['emailsubdomain']
+	);
+	$form['submit'] = array(
+		'#type' => 'submit',
+		'#value' => isset($faculty) ? 'Update' : 'Save',
+		'#attributes' => array('class' => 'btn'),
+	);
+
+	$form['_teacher'] = array('#type' => 'value', '#value' => $edit);
+	if(!isset($teacher)) {
+		$form['created'] = array('#type' => 'value', '#value' => time());
+	}else {
+		$form['updated'] = array('#type' => 'value', '#value' => time());
+		$form['_loaded'] = array('#type' => 'value', '#value' => $teacher);
+	}
+	return $form;
+}
+function nurspri_school_teacher_form_validate($form, &$form_state) {
+	$teacher = $form_state['values']['_teacher'];
+    $teacher_name = $form_state['values']['name'];
+    $teacher_code = $form_state['values']['teachercode'];
+    $fields = drupal_schema_fields_sql('faculty');
+
+    $op = $form_state['values']['op'];
+    if($op != 'Update') {
+        // does teacher name exist?
+        if(in_array($teacher_name, Faculty::listFaculty($fields))) {
+            form_error($form['name'], t('The teacher, @name already exist', array('@name' => $teacher_name)));
+        }
+        // does teacher_code exist?
+        if(in_array($teacher_code, Faculty::listFaculty($fields))) {
+            form_error($form['code'], t('The teacher code, @code already exist', array('@code' => $teacher_code)));
+        }
+    
+    }
+}
+function nurspri_school_teacher_form_submit($form, &$form_state) {
+	$teacher = $form_state['values']['_teacher'];
+	$loaded = $form_state['values']['_loaded'];
+
+	/*$created = time();
+	$form_state['values']['created'] = $created;*/
+	$teacher_table = 'faculty';
+	$success = FALSE;
+
+	if(!empty($teacher)) {
+	// it's an edit
+	//$success = drupal_write_record($teacher_table, $faculty, 'id');
+		db_query("UPDATE {faculty} SET name = '%s', facultycode ='%s', description = '%s', emailsubdomain = '%s', updated = %d WHERE id = %d", $form_state['values']['name'], $form_state['values']['teachercode'], $form_state['values']['description'], $form_state['values']['emailsubdomain'], $form_state['values']['updated'], $loaded['id']);
+	  $success = TRUE;
+	if($success) {
+		drupal_set_message('Update completed successfully');
+		return;
+	}
+	}
+	drupal_write_record($teacher_table, $form_state['values']);
+	$success = TRUE;
+	if($success) {
+		drupal_set_message('Teacher created successfully');
+  }
+}
+/**
+ * assign teacher for a subject
+ */
+function nurspri_school_teacher_subj_form(&$form_state, $dept = NULL, $edit = NULL) {
+	// assign teacher for a subject
+}
+/**
+ * Validate teacher for a subject
+ */
+function nurspri_school_teacher_subj_form_validate($form, &$form_state) {
+	// validate teacher for a subject
+}
+function nurspri_school_teacher_subj_form_submit($form, &$form_state) {
+    // submit code
+}
+
 /**
  * Implements hook_department_settings 
  */
 function nurspri_school_department_settings($type) {
- 
+	//not required
+}
+function nurspri_school_programme_settings($type) {
+	//not required
+}
+function nurspri_school_programme_form(&$form_state, $programme = NULL, $edit = NULL) {
+	//not required
+}
+function nurspri_school_programme_form_validate($form, &$form_state) {
+    //not required
+}
+function nurspri_school_programme_form_submit($form, &$form_state) {
+    //not required
 }
 function nurspri_school_student_application_table_info() {
   $table['course_info'] = array(
@@ -147,273 +348,266 @@ function nurspri_school_student_application_table_info() {
   );
   return $table;
 }
+/**
+ * 
+ * 
+ * @param type $form_state
+ * @param type $edit
+ * @param type $dept 
+ */
+function nurspri_school_addsubject_form(&$form_state, $subject = NULL, $edit = NULL) {
+    $edit = (empty($form_state['values'])) ? (array)$subject : $form_state['values'];
+  
+	if($edit) {
+		drupal_set_title('Edit subject');
+	}else {
+		drupal_set_title('Add subject');
+	}
 
+	// @todo $fields = module_invoke($module, 'course_field_info');
+	// snippet: if(isset($fields['title'])
+	$form['#attributes'] = array('class' => 'form-horizontal');
+	// subject title
+	$form['title'] = array(
+		'#type' => 'textfield',
+		'#title' => t('Subject title'),
+		'#description' => t('The subject title'),
+		'#default_value' => $edit['title'],
+		'#required' => TRUE
+	);
+	// level
+	$level = module_invoke('nurspri_school', 'academic_level');
+	$form['level'] = array(
+		'#type' => 'select',
+		'#title' => t('Academic level'),
+		//'#options' => AcademicLevel::listAcademicLevels(),
+		//'#options' => drupal_map_assoc(array(100, 200, 300, 400, 500)),
+		'#options' => $level,
+		'#default_value' => $edit['level'],
+		'#required' => TRUE
+	);
+	// Subject code
+	$form['code'] = array(
+		'#type' => 'textfield',
+		'#title' => t('Subject code'),
+		'#description' => t('The subject code'),
+		'#default_value' => $edit['code'],
+		'#required' => TRUE
+	);
+	// academic session
+	$form['session'] = array(
+		'#type' => 'select',
+		'#title' => t('Academic session'),
+		'#description' => t('The academic session this course is available for'),
+		'#options' => AcademicSession::listAcademicSession(),
+		'#default_value' => $edit['session'],
+		'#required' => TRUE
+	);
+	// Teacher
+	$teachers = acm_school_get_users_in_a_role(37);
+	$form['teacherincharge'] = array(
+		'#type' => 'select',// separate by a comma
+		'#title' => t('Subject teacher'),
+		'#description' => t('Subject assigned to a teacher'),
+		'#options' => $teachers, // a list of lecturers in the school
+		'#default_value' => $edit['lecturerincharge'],
+		'#required' => TRUE
+	);
+	$form['exam_score_id'] = array(
+		'#type' => 'textfield',
+		'#title' => t('Exam score'),
+		'#description' => t('This subject exam score'),
+		'#default_value' => $edit['exam_score_id']
+	);
+	$form['maxexammark'] = array(
+		'#type' => 'textfield',
+		'#title' => t('Maximum exam mark'),
+		'#description' => t('An exam score maximum mark. For example, 100 is the maximum mark for an exam score of 50/100'),
+		'#default_value' => $edit['maxexammark']
+	);
+	$form['submit'] = array(
+		'#type' => 'submit',
+		'#value' => isset($course) ? 'Update' :  'Save',
+		'#attributes' => array('class' => 'btn'),
+	);
+  
+	$form['_subject'] = array('#type' => 'value', '#value' => $edit);
+	if(!isset($subject)) {
+		$form['created'] = array('#type' => 'value', '#value' => time());
+	} else {
+		$form['updated'] = array('#type' => 'value', '#value' => time());
+		$form['_loaded'] = array('#type' => 'value', '#value' => $subject);
+	}
+  return $form;
+}
+function nurspri_school_addsubject_form_validate($form, &$form_state) {
+	$subject = $form_state['values']['_subject'];
+    $subject_title = $form_state['values']['title'];
+    $subject_code = $form_state['values']['code'];
+    $fields = drupal_schema_fields_sql('academic_course');
+    $op = $form_state['values']['op'];
+
+    if($op != 'Update') {
+        // does subject title exist?
+        if(in_array($subject_title, Course::listCourses($fields))) {
+            form_error($form['title'], t('The subject title @title already exist', array('@title' => $subject_title)));
+        }
+        // does subject code exist?
+        if(in_array($subject_code, Course::listCourses($fields))) {
+            form_error($form['code'], t('The subject code @name already exist.', array('@code' => $subject_code)));
+        }
+    }
+}
+function nurspri_school_addsubject_form_submit($form, &$form_state) {
+	$subject = $form_state['values']['_subject'];
+	$loaded = $form_state['values']['_loaded'];
+	$subject_table = 'academic_course';
+	$success = FALSE;
+  
+	if(!empty($subject)) {
+		db_query("UPDATE {academic_course} SET title = '%s',  code = '%s', level = '%s', session = '%s', lecturerincharge = '%s', exam_score_id = %d, maxexammark = %d, updated = %d WHERE id = %d", $form_state['values']['title'], $form_state['values']['code'],  $form_state['values']['level'], $form_state['values']['session'], $form_state['values']['teacherincharge'],$form_state['values']['exam_score_id'], $form_state['values']['maxtestmark'],  $form_state['values']['updated'], $loaded['id']);
+		
+		$success = TRUE;
+		if($success) {
+			drupal_set_message('Update completed successfully');
+			return;
+		}
+	}
+  
+	$success = drupal_write_record($subject_table, $form_state['values']);
+	$subject_id = db_fetch_object(db_query("SELECT MAX(id) as id FROM {$subject_table}"));
+	if($success) {
+		if(isset($subject_id)) {
+			call_user_func_array('acm_school_create_batch_course_content', array($subject_id));
+		}
+	} else {
+		drupal_set_message("Something dangerous happened! Couldn't save new Course", 'error');
+	}
+}
+function nurspri_school_course_settings($subject) {
+	$form['#attributes'] = array('class' => 'form-horizontal');
+	$form['exam_maximum_mark'] = array(
+	'#type' => 'textfield',
+	'#title' => t('Exam maximum mark'),
+	'#default_value' => variable_get('exam_maximum_mark', (int)'')
+	);
+	return system_settings_form($form);
+}
 /**
  * Implements hook_grade_settings 
  */
 function nurspri_school_grade_settings($type){
-  $settings['type'] = 'grade';
-  $settings['grade']['configure'] = array(
-    'title' => t('Configure grading system'),
-    'callback url' => 'admin/settings/school/grade/gradingsystem'
-  );
-  // set global grading point
-  $settings['grade']['grade point'] = array(
-    'title' => 'Set grade point',
-    'callback url' => 'admin/settings/school/grade/gradepoint'
-  );
-  // set grading point for a specific department
-  // a staff in medicine department should be able to contact the IT
-  // staff (Acadaman authorized user) to set medicine department
-  // grade point to 7
- 
-  $settings['grade']['grade a student'] = array(
-    'title' => 'Grade a student',
-    'callback url' => 'admin/settings/school/grade/add'
-  );
-  $settings['grade']['score a student'] = array(
-    'title' => 'Score a student',
-    'callback url' => 'admin/settings/school/score/add'
-  );
-  if($type == 'gradingsystem') {
-    $settings['grade']['gradingsystem_form'] = drupal_get_form('nurspri_school_gradingsystem_settings_form'); //uni_school_gradingsystem_settings_form();
-  }
-  if($type == 'gradepoint') {
-    $settings['grade']['gradepoint_form'] = drupal_get_form('nurspri_school_gradepoint_settings_form'); //uni_school_gradepoint_settings_form();
-  }
+	$settings['type'] = 'grade';
+	$settings['grade']['grade a student'] = array(
+		'title' => 'Grade a student',
+		'callback url' => 'admin/settings/school/grade/add'
+	);
+	$settings['grade']['score a student'] = array(
+		'title' => 'Score a student',
+		'callback url' => 'admin/settings/school/score/add'
+	);
+	return $settings;
   
-  if($type == 'add') {
-    $settings['grade']['grade_form'] = drupal_get_form('nurspri_school_grade_form');
-  }
+	if($type == 'add') {
+		$settings['grade']['grade_form'] = drupal_get_form('nurspri_school_grade_form');
+	}
   
   return $settings;
 }
-
 function nurspri_school_gradingsystem_settings_form(&$form_state) {
-  $form['#attributes'] = array('class' => 'form-horizontal');
-  $form['grade_system'] = array(
-    '#type' => 'select',
-    '#title' => t('Grade system'),
-    '#options' => drupal_map_assoc(array('None', 'Local country', 'WES')),
-    '#default_value' => variable_get('grade_system_type', ''),
-    '#ahah' => array(
-      'path' => 'grade/ahah/grade-system/callback',
-      'wrapper' => 'grade-system-wrapper',
-      'effect' => 'fade'
-    ),
-    '#required' => TRUE
-  );
-  
-  $form['grade_system_holder'] = array(
-    '#tree' => TRUE,
-    '#title' => t(''),
-    '#type' => 'fieldset',
-    '#prefix' => '<div id="grade-system-wrapper">',
-    '#suffix' => '</div>',
-  );
-
-  // @todo If type is Local country
-  // Add a field to select country.
-  // variable_get('country_grade_system', '')
-  if($edit['grading_system'] == 'Local country') {
-    $form['grade_system_holder']['country_grade_system'] = array(
-      '#type' => 'select',
-      '#title' => t('Country'),
-      '#description' => t('Select a country'),
-      '#options' => array('ng'),
-      '#default_value' => variable_get('country_grade_system', '')
-    );
-  }
-
-  // TODO: Block default POST in submit.
-  return system_settings_form($form);
+	//not needed
 }
 
-/**
- * Implements hook_grade_local_country
- *
- * Grade point system by local country as seen here: http://en.wikipedia.org/wiki/Grading_systems_by_country
- */
-function nurspri_school_grade_local_country($country_code) {
-
-}
-
-/**
- * Implements hook_grade_ects
- *
- * Grade point system by ECTS http://en.wikipedia.org/wiki/ECTS_grading_scale
- */
-function nurspri_school_grade_ects() {
-
-}
-
-/**
- * Implements hook_grade_wes
- *
- * Grade point system by WES as seen at http://wenr.wes.org/2011/08/wenr-julyaugust-2011-practical-information/
- */
-function nurspri_school_grade_wes() {
-
-}
-
-/**
- * Computes student's current GPA. Computes student's GPA
- * for the current semester/session
- */
-function uni_school_compute_current_gpa($uid, $latest_score) {
-  // get the current grade system and switch on that.
-  // get current semester or session.
-  // get the courses taken by the student in that semester.
-  // get the courses credit point.
-  // get the grade gotten on each course by student. course => grade
-  // get the gpe on each grade.
-  // calculate and return gpa 
-}
-
-/**
- * Computes student's cumulative GPA
- */
-function nurspri_school_compute_cumulative_gpa($uid) {
-
-}
-
-function nurspri_school_gradepoint_settings_form() {
-  $form['#attributes'] = array('class' => 'form-horizontal');
-  $form['gradepoint'] = array(
-    '#type' => 'select',
-    '#title' => t('Set grade point'),
-    '#options' => array(4, 5, 7),
-    '#default_value' => variable_get('gradepoint', '')
-  );
-  return system_settings_form($form);
-}
-
-function nurspri_school_dept_gradepoint_settings_form() {
-  $form['#attributes'] = array('class' => 'form-horizontal');
-  $form['gradepoint_depts'] = array(
-    '#type' => 'select', // multiple
-    '#title' => t('Department'),
-    '#options' => array(),
-    '#default_value' => variable_get('gradepoint_depts', array())
-  );
-  $form['dept_gradepoint'] = array(
-    '#type' => 'select',
-    '#title' => t('Set grade point'),
-    '#options' => array(4,5,7),
-    '#default_value' => variable_get('dept_gradepoint', '')
-  );
-  return system_settings_form($form);
-}
 
 function nurspri_school_grade_form(&$form_state, $grade = NULL, $edit = NULL ) {
+	$edit = (empty($form_state['values']))? $grade : $form_state['values'];
 
-  $edit = (empty($form_state['values']))? $grade : $form_state['values'];
+	if($edit) {
+		drupal_set_title('Edit Grade');
+	}else {
+		drupal_set_title('Add Grade');
+	}
+	$form['#attributes'] = array('class' => 'form-horizontal');
+	$students = acm_school_get_users_in_a_role(29);
 
-  if($edit) {
-    drupal_set_title('Edit Grade');
-  }else {
-    drupal_set_title('Add Grade');
-  }
+	// student uid
+	$form['uid'] = array(
+		'#type' => 'select',
+		'#title' => t('Student'),
+		'#description' => t('Select student to grade'),
+		'#options' => $students,
+		'#default_value' => $edit['uid'],
+		'#required' => TRUE
+	);
+	// automatically populated when student uid is selected
+	$form['subject'] = array(
+		'#type' => 'select',
+		'#title' => t('Subject'),
+		'#description' => t('Student subject'),
+		'#options' => array(),
+		'#default_value' => $edit['subject'],
+		'#required' => TRUE 
+	);
+	$form['dropped'] = array(
+		'#type' => 'checkbox',
+		'#title' => t('Is subject dropped?'),
+		'#description' => t('Whether subject is dropped or not'),
+		'#default_value' => $edit['dropped']
+	);
+	$form['grade'] = array(
+		'#type' => 'textfield',
+		'#title' => t('Grade'),
+		'#description' => t('Grade representation of a score based on Grading system'),
+		'#default_Value' => $edit['grade']
+	);
+	$form['exam_score_id'] = array(
+		'#type' => 'textfield',
+		'#title' => t('Exam score'),
+		'#description' => t('Student exam score'),
+		'#default_value' => $edit['exam_score_id'],
+		'#required' => TRUE 
+	);
+	$form['totalscore'] = array(
+		'#type' => 'textfield',
+		'#title' => t('Total score'),
+		'#description' => t('Total score (exam score)'),
+		'#default_value' => $edit['totalscore']
+	);
+	$form['submittedby'] = array(
+		'#type' => 'select',
+		'#title' => t('Submitted by'),
+		'#description' => t('Select the teacher  who submitted the grade'),
+		'#default_value' => $edit['submittedby'],
+		'#options' => array(),
+		'#required' => TRUE
+	);
+	$form['submitted'] = array(
+		'#type' => 'checkbox',
+		'#title' => t('Submitted for approval?'),
+		'#description' => t('Whether this grade is submitted for approval or not'),
+		'#default_value' => $edit['submitted'],
+		'#required' => TRUE
+	);
+	$form['approved'] = array(
+		'#type' => 'checkbox',
+		'#title' => t('Is grade approved?'),
+		'#description' => t('Whether this grade has been approved or not'),
+		'#default_value' => $edit['approved']
+	);
+	$form['submit'] = array(
+		'#type' => 'submit',
+		'#value' => isset($score) ? 'Update' : 'Save',
+		'#attributes' => array('class' => 'btn'),
+	);
+	$form['_grade'] = array('#type' => 'value', '#value' => $edit);
+	$form['created'] = array('#type' => 'value', '#value' => time());
+	if(isset($grade)) {
+	  $form['state'] = array('#type' => 'value', '#value' => 'update');
+	  $form['updated'] = array('#type' => 'value', '#value' => time());
+	  $form['_loaded'] = array('#type' => 'value', '#value' => $grade);
+	}
 
-  $form['#attributes'] = array('class' => 'form-horizontal');
-
-  $students = acm_school_get_users_in_a_role(29);
-
-  // student uid
-  $form['uid'] = array(
-    '#type' => 'select',
-    '#title' => t('Student'),
-    '#description' => t('Select student to grade'),
-    '#options' => $students,
-    '#default_value' => $edit['uid'],
-    '#required' => TRUE
-  );
-
-  // automatically populated when student uid is selected
-  $form['course'] = array(
-    '#type' => 'select',
-    '#title' => t('Course'),
-    '#description' => t('Student course'),
-    '#options' => array(),
-    '#default_value' => $edit['course'],
-    '#required' => TRUE 
-  );
-  $form['grade'] = array(
-    '#type' => 'textfield',
-    '#title' => t('Grade'),
-    '#description' => t('Grade representation of a score based on Grading system'),
-    '#default_Value' => $edit['grade']
-  );
-
-  $form['gradepoint'] = array(
-    '#type' => 'textfield',
-    '#title' => t('Grade point'),
-    '#description' => t('The applicable grade point to a particular score. For example, a score(total score) of 60 might have a grade point of 3 or 3.3 if the applicable grade is B+'),
-    '#default_value' => $edit['gradepoint']
-  );
-  /**
-   * average test score
-   * gotten from score table based on the uid
-   */ 
-  $form['test_score_id'] = array(
-    '#type' => 'textfield',
-    '#title' => t('Test score'),
-    '#description' => t('Average test score for this student grade'),
-    '#default_value' => $edit['test_score_id']
-  );
-
-  $form['exam_score_id'] = array(
-    '#type' => 'textfield',
-    '#title' => t('Exam score'),
-    '#description' => t('Student exam score'),
-    '#default_value' => $edit['exam_score_id'],
-    '#required' => TRUE 
-  );
-
-  $form['totalscore'] = array(
-    '#type' => 'textfield',
-    '#title' => t('Total score'),
-    '#description' => t('Total score (testscores + exam score)'),
-    '#default_value' => $edit['totalscore']
-  );
-
-  $form['submittedby'] = array(
-    '#type' => 'select',
-    '#title' => t('Submitted by'),
-    '#description' => t('Select the lecturer who submitted the grade'),
-    '#default_value' => $edit['submittedby'],
-    '#options' => array(),
-    '#required' => TRUE
-  );
-
-  $form['submitted'] = array(
-    '#type' => 'checkbox',
-    '#title' => t('Submitted for approval?'),
-    '#description' => t('Whether this grade is submitted for approval or not'),
-    '#default_value' => $edit['submitted'],
-    '#required' => TRUE
-  );
-  $form['approved'] = array(
-    '#type' => 'checkbox',
-    '#title' => t('Is grade approved?'),
-    '#description' => t('Whether this grade has been approved or not'),
-    '#default_value' => $edit['approved']
-  );
-  
-  $form['submit'] = array(
-    '#type' => 'submit',
-    '#value' => isset($score) ? 'Update' : 'Save',
-    '#attributes' => array('class' => 'btn'),
-  );
-  $form['_grade'] = array('#type' => 'value', '#value' => $edit);
-  $form['created'] = array('#type' => 'value', '#value' => time());
-  if(isset($grade)) {
-      $form['state'] = array('#type' => 'value', '#value' => 'update');
-      $form['updated'] = array('#type' => 'value', '#value' => time());
-      $form['_loaded'] = array('#type' => 'value', '#value' => $grade);
-  }
-
-  return $form;
+	return $form;
 }
 
 function nurspri_school_grade_form_validate($form, &$form_state) {
@@ -427,31 +621,28 @@ function nurspri_school_grade_form_submit($form, &$form_state) {
  * @deprecated
  * @return type 
  */
-function uni_school_grade_settings_form() {
-  if($type == 'gradingsystem') {
-    
-    return nurspri_school_gradingsystem_settings_form();
-  }
+function nurspri_school_grade_settings_form() {
+  
 }
 
 /**
  * Implements hook_fees_type 
  */
 function nurspri_school_fees_type() {
-  return array();
+	return array('General');
 }
 /**
  * implements hook_faculty 
  */
 function nurspri_school_faculty() {
- 
+	//not needed
 }
 
 /**
  * implements hook_department 
  */
 function nurspri_school_department() {
-  
+	//not needed
 }
 
 /**
@@ -502,34 +693,35 @@ function nurspri_school_acm_student_application() {
       $profile = acm_school_profile_load($user->uid);
       //  drupal_get_form('uni_school_admission_course_form', $profile);
       return drupal_get_form('acm_school_student_profile_form', (array)$profile->profile, NULL);
-  }
-
-  switch($_GET['app']) {
-  case 'sponsor':
-      drupal_set_title('Sponsor');
-      $studentApplication = views_get_view('uni_student_application_view');
-      $studentApplication->display = 'sponsor';
-      break;
-    case 'course':
-      drupal_set_title('Course');
-        $studentApplication = views_get_view('uni_student_application_view');
-        $studentApplication->display = 'course';
-        break;
-    case 'nextofkin':
-      drupal_set_title('Next of Kin');
-        $studentApplication = views_get_view('uni_student_application_view');
-        $studentApplication->display = 'nextofkin';
-        break;
-    default:
-        $studentApplication = views_get_view('uni_student_application_view');
-        $studentApplication->display = 'default';
-        break;
-  }
-  // alternatively, just say, 
-  //$studentApplication = views_get_view('uni_student_application_view'); // take the view to display through its own hook // view for uni student application
-  //$studentApplication->display = 'default';
-  
-  return $studentApplication;
+	}
+	switch($_GET['edit']) {
+	case 'app':
+		$profile = acm_school_profile_load($user->uid);
+		return drupal_get_form('acm_school_student_profile_form', (array)$profile->profile, NULL);
+	}
+	switch($_GET['app']) {
+	case 'sponsor':
+		drupal_set_title('Sponsor');
+		$studentApplication = views_get_view('uni_student_application_view');
+		$studentApplication->display = 'sponsor';
+	break;
+	case 'class':
+		drupal_set_title('Class');
+		$studentApplication = views_get_view('uni_student_application_view');
+		$studentApplication->display = 'class';
+	break;
+	case 'nextofkin':
+		drupal_set_title('Next of Kin');
+		$studentApplication = views_get_view('uni_student_application_view');
+		$studentApplication->display = 'nextofkin';
+	break;
+	default:
+		$studentApplication = views_get_view('uni_student_application_view');
+		$studentApplication->display = 'default';
+	break;
+	}
+	return $studentApplication;
+	
 }
 
 /**
@@ -540,9 +732,9 @@ function nurspri_school_student_application_items() {
   $items['sponsor'] = array(
     'data' => l('Sponsor Information', 'application/sponsor')
   );
-  $items['course'] = array(
-    'data' => l('Course Information', 'application/course')
-);
+  $items['class'] = array(
+		'data' => l('Class Information', 'application/class')
+	);
   return $items;
 
 }
@@ -560,9 +752,9 @@ function nurspri_school_student_application_items() {
 function nurspri_school_admission_application_info() {
   $application_form = array(
    
-    'course' => array(
-      'title' => 'course',
-      'form_id' => 'nurspri_school_admission_course_form'
+    'class' => array(
+      'title' => 'class',
+      'form_id' => 'nurspri_school_admission_class_form'
     ),
     'sponsor' => array(
       'title' => 'sponsor',
@@ -588,92 +780,78 @@ function nurspri_school_admission_form_id() {
   return 'nurspri_school_admission_form';
 }
 
-//function nurspri_school_admission_course_edit($course_info) {
-  //$course_info->course['state'] = 'edit';
-  //return uni_school_admission_course_form($profile->profile);
-  //return drupal_get_form('uni_school_admission_course_form', $course_info, NULL, NULL);
-//}
-
-function nurspri_school_admission_course_form(&$form_state, $course_info, $steps_order, $hook) {
-  $edit = (empty($form_state['values'])) ? (array)$course_info : $form_state['values'];
+function nurspri_school_admission_class_form(&$form_state, $class_info, $steps_order, $hook) {
+	$edit = (empty($form_state['values'])) ? (array)$class_info : $form_state['values'];
   
-  $form['#attributes'] = array('class' => 'form-horizontal');
-  $form['course_info'] = array(
-    '#type' => 'markup',
-    '#value' => '<div style="background:#f6f6f2; padding:5px">Course Information</div>',
-  );
-  $form['level'] = array(
-    '#type' => 'select',
-    '#title' => t('Academic level'),
-    '#default_value' => $edit['level'],
-    '#required' => TRUE,
-    '#options' => array('100', '200', '300', '400', '500'), // get values from StudentLevel class
-  );
-  
-  $form['modeofentry'] = array(
-    '#type' => 'select',
-    '#title' => t('Mode of entry'),
-    '#options' => array('UME', 'DE'), // get values from Admission class
-    '#default_value' => $edit['modeofentry'], 
-    '#required' => TRUE,
-  );
-  $form['yearofentry'] = array(
-    '#type' => 'select',
-    '#title' => t('Year of entry'),
-    '#options' => array('2013', '2012'), // display 10 years + the current year
-    '#default_value' => $edit['yearofentry'],
-    '#required' => TRUE,
-  );
-  $form['registeredsession'] = array(
-    '#type' => 'select',
-    '#title' => t('Academic session'),
-    '#default_value' => $edit['registeredsession'], // the current academic session
-    '#options' => AcademicSession::listAcademicSession(),
-    '#description' => t('The academic session you are registering for'),
-    '#required' => TRUE,
-  );
+	$form['#attributes'] = array('class' => 'form-horizontal');
+	$form['class_info'] = array(
+		'#type' => 'markup',
+		'#value' => '<div style="background:#f6f6f2; padding:5px">Class Information</div>',
+	);
+	$form['level'] = array(
+		'#type' => 'select',
+		'#title' => t('Academic level'),
+		'#default_value' => $edit['level'],
+		'#required' => TRUE,
+		'#options' => array('100', '200', '300', '400', '500'), // get values from StudentLevel class
+	);
+	$form['yearofentry'] = array(
+		'#type' => 'select',
+		'#title' => t('Year of entry'),
+		'#options' => array('2013', '2012'), // display 10 years + the current year
+		'#default_value' => $edit['yearofentry'],
+		'#required' => TRUE,
+	);
+	$form['registeredsession'] = array(
+		'#type' => 'select',
+		'#title' => t('Academic session'),
+		'#default_value' => $edit['registeredsession'], // the current academic session
+		'#options' => AcademicSession::listAcademicSession(),
+		'#description' => t('The academic session you are registering for'),
+		'#required' => TRUE,
+	);
  
-  $form['submit'] = array(
-    '#type' => 'submit',
-    '#value' => 'Save and continue',
-    '#attributes' => array('class' => 'btn')
-  );
+	$form['submit'] = array(
+		'#type' => 'submit',
+		'#value' => 'Save and continue',
+		'#attributes' => array('class' => 'btn')
+	);
   
-  $form['_current'] = array('#type' => 'value', '#value' => $hook);
-  $form['_next'] = array('#type' => 'value', '#value' => 'sponsor');
-  $form['_steps'] = array('#type' => 'value', '#value' => $steps_order);
-  $form['_course_info'] = array('#type' => 'value', '#value' => $course_info);
+	$form['_current'] = array('#type' => 'value', '#value' => $hook);
+	$form['_next'] = array('#type' => 'value', '#value' => 'sponsor');
+	$form['_steps'] = array('#type' => 'value', '#value' => $steps_order);
+	$form['_class_info'] = array('#type' => 'value', '#value' => $class_info);
   
   return $form;
 }
 
-function nurspri_school_admission_course_form_submit($form, &$form_state) {
-  $current = $form_state['values']['_current'];
-  $next = $form_state['values']['_next'];
-  $course_info = $form_state['values']['_course_info'];
+function nurspri_school_admission_class_form_submit($form, &$form_state) {
+	$current = $form_state['values']['_current'];
+	$next = $form_state['values']['_next'];
+	$class_info = $form_state['values']['_class_info'];
   
-  $course_info_table = 'course_info';
-  $tracker = db_result(db_query("SELECT step FROM {student_application_tracker} WHERE email = '%s'", $email));
-  $success = FALSE;
+	$class_info_table = 'course_info';
+	$tracker = db_result(db_query("SELECT step FROM {student_application_tracker} WHERE email = '%s'", $email));
+	$success = FALSE;
   
-  if(!empty($course_info)) {
-    // it's an edit
-    $success = drupal_write_record($course_info_table, $course_info, 'id');
-    if($success) {
-      drupal_set_message('Update completed successfully');
-      return;
-    }
-  }
+	if(!empty($class_info)) {
+		// it's an edit
+		$success = drupal_write_record($class_info_table, $class_info, 'id');
+		if($success) {
+		  drupal_set_message('Update completed successfully');
+		  return;
+		}
+	}
   
-  drupal_write_record($course_info_table, $form_state['values']);
-  // also update student_application_tracker
-  $tracker_data = array('email' => base64_decode($_GET['c']), 'step' => $next);
-  drupal_write_record('student_application_tracker', $tracker_data, 'email');
+	drupal_write_record($class_info_table, $form_state['values']);
+	// also update student_application_tracker
+	$tracker_data = array('email' => base64_decode($_GET['c']), 'step' => $next);
+	drupal_write_record('student_application_tracker', $tracker_data, 'email');
   
-  $success = TRUE;
-  if($success) {
-    drupal_goto('admission/apply', 'step=' . $next . '&c=' . $_GET['c']); 
-  }
+	$success = TRUE;
+	if($success) {
+		drupal_goto('admission/apply', 'step=' . $next . '&c=' . $_GET['c']); 
+	}
 }
 
 /**
@@ -1033,23 +1211,63 @@ function nurspri_school_examresults_save() {
  * @see acm_school_setup
  */
 function nurspri_school_setup_tasks() {
-  // invoke steps_list here so we can pass on the next step
-
-  //return $output;
+	if($_GET['step'] == 'setup') {
+		$step = 'add-teacher';
+		$output = drupal_get_form('nurspri_school_setup_teacher_form');
+		variable_set('setup_step', 'teacher');
+	}
+	if($_GET['step'] == 'class'){
+		$step = 'add-class';
+		$output = drupal_get_form('nurspri_school_setup_class_form');
+		variable_set('setup_step', 'class');
+	}
+  return $output;
 }
-function nurspri_school_setup_course_form() {
-  $form['#attributes'] = array('class' => 'form-horizontal');
-  $form['submit'] = array(
-    '#type' => 'submit',
-    '#value' => 'Save and continue',
-    '#attributes' => array('class' => 'btn')
-  );
+function nurspri_school_setup_teacher_form() {
+	$form['#attributes'] = array('class' => 'form-horizontal');
+	$form['name'] = array(
+		'#type' => t('textfield'),
+		'#title' => t('Name'),
+		'#description' => t('Enter a teacher name'),
+	);
+	$form['description'] = array(
+		'#type' => t('textfield'),
+		'#title' => t('Description'),
+		'#description' => t('Enter a description'),
+	);
+	$form['teacher_code'] = array(
+		'#type' => t('textfield'),
+		'#title' => t('Teacher code'),
+		'#description' => t('Enter a code for this teacher'),
+	);
+	$form['email_subdomain'] = array(
+		'#type' => t('textfield'),
+		'#title' => t('Email subdomain'),
+		'#description' => t('Enter an email subdomain for this teacher. E.g'),
+	);
+	$form['submit'] = array(
+		'#type' => 'submit',
+		'#value' => 'Save and continue',
+		'#attributes' => array('class' => 'btn')
+	);
   return $form;
 }
+function nurspri_school_setup_teacher_form_submit($form, &$form_state) {
+	drupal_goto('setup', 'step=class'); // $steps['next'];
+}
 
-function nurspri_school_setup_course_form_submit($form, &$form_state) {
-  
-  drupal_goto('setup', 'step=finished');
+function nurspri_school_setup_class_form() {
+	$form['#attributes'] = array('class' => 'form-horizontal');
+	$form['submit'] = array(
+		'#type' => 'submit',
+		'#value' => 'Save and continue',
+		'#attributes' => array('class' => 'btn')
+	);
+	return $form;
+}
+
+function nurspri_school_setup_class_form_submit($form, &$form_state) {
+	drupal_goto('setup', 'step=finished');
 }
 
 /**
@@ -1079,10 +1297,9 @@ function nurspri_school_admission_course_load($uid) {
  * 
  * @param type $course 
  */
-function nurspri_school_admission_course_edit($uid) {
-    // load the course_info object by calling uni_school_course_load
-    $course_info = nurspri_school_admission_course_load($uid);
-    return drupal_get_form('nurspri_school_admission_course_form', $course_info, NULL, NULL); 
+function nurspri_school_admission_class_edit($uid) {
+    $class_info = nurspri_school_admission_class_load($uid);
+    return drupal_get_form('nurspri_school_admission_class_form', $class_info, NULL, NULL);
 }
 
 /**
@@ -1107,9 +1324,9 @@ function nurspri_school_academic_level() {
  */
 function nurspri_school_student_course() {
 
-  drupal_set_title('Course');
-  $studentCourses = views_get_view('student_course');
-  $studentCourses->display = 'nurspri_school_student_course';
+	drupal_set_title('Class');
+	$studentCourses = views_get_view('student_class');
+	$studentCourses->display = 'nurspri_school_student_class';
 
   return $studentCourses;
 }
@@ -1120,7 +1337,10 @@ function nurspri_school_student_course() {
  */
 function nurspri_school_score_settings($type) {
   $settings['type'] = 'score';
-  
+  $settings['score']['score a student'] = array(
+		'title' => 'Score a student',
+		'callback url' => 'admin/settings/school/score/add'
+	);
   if($type == 'add') {
     $settings['score']['score_form'] = drupal_get_form('nurspri_school_score_form');
   }
@@ -1130,129 +1350,86 @@ function nurspri_school_score_settings($type) {
 
 function nurspri_school_score_form(&$form_state, $score = NULL, $edit = NULL) {
 
-  $edit = (empty($form_state['values'])) ? (array)$score : $form_state['values'];
-  //dsm($edit);
-  if($edit) {
-    //TODO: drupal js here to tell client-side that it's edit.
-    drupal_add_js(array('score' => array('context' => 'score-form-edit')), 'setting');
-    drupal_set_title('Edit Score');
-  }else {
-    drupal_set_title('Add Score');
-  }
+	$edit = (empty($form_state['values'])) ? (array)$score : $form_state['values'];
+	//dsm($edit);
+	if($edit) {
+	//TODO: drupal js here to tell client-side that it's edit.
+		drupal_add_js(array('score' => array('context' => 'score-form-edit')), 'setting');
+		drupal_set_title('Edit Score');
+	}else {
+		drupal_set_title('Add Score');
+	}
+	$form['class_holder'] = array(
+		'#tree' => TRUE,
+		'#prefix' => '<div id="programme-wrapper">',
+		'#suffix' => '</div>',
+	);
+	$form['#attributes'] = array('class' => 'form-horizontal');
+	$subjects = isset($subject) ? Subject::listStudentsByRegisteredSubject($subjects) : array();
 
-  $form['#attributes'] = array('class' => 'form-horizontal');
-  //$programme = $edit['programme'];
-  $programme = isset($form_state['values']['programme']) ? $form_state['values']['programme'] : NULL;
-  
-  // programme
-  $form['programme'] = array(
-    '#type' => 'select',
-    '#title' => t('Programme'),
-    '#description' => t('Select the student programme'),
-    '#options' => Programme::listProgrammes(array('id','name'), 'id'),
-    '#default_value' => $edit['programme'],
-    '#ahah' => array(
-      'path' => 'score/ahah/programme/callback',
-      'wrapper' => 'programme-wrapper',
-      'event' => 'change', // default value: does not need to be set explicitly.
-    ),
-    '#required' => TRUE
-  );
-  $form['programme_holder'] = array(
-    '#tree' => TRUE,
-    '#prefix' => '<div id="programme-wrapper">',
-    '#suffix' => '</div>',
-  );
+	$form['class_holder']['subject'] = array(
+		'#type' => 'select',
+		'#title' => t('Subject'),
+		'#description' => t('Select the student subject'),
+		'#options' => $subjects,
+		'#default_value' => $edit['subject'],
+		'#ahah' => array(
+		  'path' => 'score/ahah/subject/callback',
+		  'wrapper' => 'subject-wrapper',
+		  'event' => 'change', // default value: does not need to be set explicitly.
+		'#required' => TRUE
+		)
+	);
 
-  $courses = isset($programme) ? Course::getCoursesByProgramme($programme) : array();
+	$students = (isset($subject) || !empty($subject)) ? StudentSubject::listStudentsByRegisteredSubject($subject, 'uid') : array(955 => 'Kayode Odeyemi');
 
-  // course
-  // a list of courses registered by the student
-  $form['programme_holder']['course'] = array(
-    '#type' => 'select',
-    '#title' => t('Course'),
-    '#description' => t('Select the student course'),
-    '#options' => $courses,
-    '#default_value' => $edit['course'],
-    '#ahah' => array(
-      'path' => 'score/ahah/course/callback',
-      'wrapper' => 'course-wrapper',
-      'event' => 'change', // default value: does not need to be set explicitly.
-    '#required' => TRUE
-    )
-  );
-  $form['course_holder'] = array(
-    '#tree' => TRUE,
-    '#prefix' => '<div id="course-wrapper">',
-    '#suffix' => '</div>',
-  );
+	// @todo Lookup profile table using student uids to retrieve matching
+	// firstname and lastname.
 
-  $course = isset($edit['course']) ? $edit['course'] : NULL;
+	//uid
+	$form['class_holder']['uid'] = array(
+		'#type' => 'select',
+		'#title' => t('Student'),
+		'#description' => t('Select the student to score'),
+		'#options' => $students,
+		'#default_value' => $edit['uid'],
+		'#required' => TRUE
+	);
+	$form['academicsession'] = array(
+		'#type' => 'select',
+		'#title' => t('Academic session'),
+		'#description' => t('Select the academic session this score is for.'),
+		'#options' => AcademicSession::listAcademicSession(),
+		'#default_value' => $edit['academicsession'],
+		'#required' => TRUE
+	);
+	$form['exam_score'] = array(
+		'#type' => 'textfield',
+		'#title' => t('Exam score'),
+		'#description' => t('The actual score value'),
+		'#default_value' => $edit['exam_score'],
+	);
+	// islocked
+	$form['islocked'] = array(
+		'#type' => 'checkbox',
+		'#title' => t('Locked'),
+		'#description' => t('Whether this score is locked from editing'),
+		'#default_value' => $edit['islocked'],
+	);
+	$form['submit'] = array(
+		'#type' => 'submit',
+		'#value' => isset($score) ? 'Update' : 'Save',
+		'#attributes' => array('class' => 'btn'),
+	);
 
-  $students = (isset($course) || !empty($course)) ? StudentCourse::listStudentsByRegisteredCourse($course, 'uid') : array(955 => 'Kayode Odeyemi');
-
-  // @todo Lookup profile table using student uids to retrieve matching
-  // firstname and lastname.
-
-  //uid
-  $form['course_holder']['uid'] = array(
-    '#type' => 'select',
-    '#title' => t('Student'),
-    '#description' => t('Select the student to score'),
-    '#options' => $students,
-    '#default_value' => $edit['uid'],
-    '#required' => TRUE
-  );
-  // academicsession
-  $form['academicsession'] = array(
-    '#type' => 'select',
-    '#title' => t('Academic session'),
-    '#description' => t('Select the academic session this score is for.'),
-    '#options' => AcademicSession::listAcademicSession(),
-    '#default_value' => $edit['academicsession'],
-    '#required' => TRUE
-  
-  );
-  $form['exam_score'] = array(
-    '#type' => 'textfield',
-    '#title' => t('Exam score'),
-    '#description' => t('The actual score value'),
-    '#default_value' => $edit['exam_score'],
-  );
-  // overall
-  $form['overall'] = array(
-    '#type' => 'select',
-    '#title' => t('Overall'),
-    '#description' => t('Score total or overall'),
-    '#default_value' => $edit['overall'],
-    '#options' => drupal_map_assoc(range(1, 1000)),
-    '#required' => TRUE
-  );
-  
-  // islocked
-  $form['islocked'] = array(
-    '#type' => 'checkbox',
-    '#title' => t('Locked'),
-    '#description' => t('Whether this score is locked from editing'),
-    '#default_value' => $edit['islocked'],
-  );
-  
-  $form['submit'] = array(
-    '#type' => 'submit',
-    '#value' => isset($score) ? 'Update' : 'Save',
-    '#attributes' => array('class' => 'btn'),
-  );
-
-  
-  $form['_score'] = array('#type' => 'value', '#value' => $edit);
-  $form['created'] = array('#type' => 'value', '#value' => time());
-  if(isset($score)) {
-      $form['state'] = array('#type' => 'value', '#value' => 'update');
-      $form['updated'] = array('#type' => 'value', '#value' => time());
-      $form['_loaded'] = array('#type' => 'value', '#value' => $score);
-  }
-
-  return $form;
+	$form['_score'] = array('#type' => 'value', '#value' => $edit);
+	$form['created'] = array('#type' => 'value', '#value' => time());
+	if(isset($score)) {
+		$form['state'] = array('#type' => 'value', '#value' => 'update');
+		$form['updated'] = array('#type' => 'value', '#value' => time());
+		$form['_loaded'] = array('#type' => 'value', '#value' => $score);
+	}
+	return $form;
 }
 
 function nurspri_school_score_form_validate($form, &$form_state) {
@@ -1261,67 +1438,59 @@ function nurspri_school_score_form_validate($form, &$form_state) {
 
 function nurspri_school_score_form_submit($form, &$form_state) {
   //dsm($form_state['values']);
-  if (!empty($form_state['ahah_submission'])) {
-    //dsm($form_state['values']);
-    return;
-  }
-  // set testcount = 0
-  $cascores = explode($form_state['values']['ca_score']);
-  $cascore = array_sum($cascores);
-  $score = $form_state['values']['_score'];
-  $score_table = 'score';
-  $loaded = $form_state['values']['_loaded'];
-  $op = $form_state['values']['op'];
+	if (!empty($form_state['ahah_submission'])) {
+	//dsm($form_state['values']);
+	return;
+	}
+	// set testcount = 0
+	$score = $form_state['values']['_score'];
+	$score_table = 'score';
+	$loaded = $form_state['values']['_loaded'];
+	$op = $form_state['values']['op'];
 
-  $success = FALSE;
-    if($op == 'Update') {
-    // it's an edit
-      db_query("UPDATE {score} SET uid = %d, programme = %d, course = %d, type = '%s', islocked = %d, academicsession = '%s', overall = %d, score = %d, cascore = '%s', updated = %d WHERE id = %d", $form_state['values']['course_holder']['uid'], $form_state['values']['programme'], $form_state['values']['programme_holder']['course'], $form_state['values']['type'], $form_state['values']['islocked'], $form_state['values']['academicsession'],
-          $form_state['values']['overall'], $form_state['values']['exam_score'], $form_state['values']['ca_score'], $form_state['values']['updated'], $loaded['id']);
-      
-    $success = TRUE;
-    if($success) {
-      // TODO: grade update score
-      $updated_score = array(
-        'programme' => $form_state['values']['programme'],
-        'course' => $form_state['values']['programme_holder']['course'],
-        'uid' => $form_state['values']['course_holder']['uid'],
-        'islocked' => $form_state['values']['islocked'],
-        'academicsession' => $form_state['values']['academicsession'],
-        'overall' => $form_state['values']['overall'],
-        'exam_score' => $form_state['values']['exam_score'],
-        'ca_score' => $form_state['values']['ca_score'],
-        'submittedby' => ''
-      );
-      // module_invoke('acm_school', 'grade_update_score', $form_state['values']);
-      drupal_set_message('Update completed successfully');
-      return;
-    }
-      drupal_set_message('An error occurred while updating Score');
-      return FALSE;
-  }
+	$success = FALSE;
+	if($op == 'Update') {
+	// it's an edit
+	db_query("UPDATE {score} SET uid = %d, course = %d, islocked = %d, academicsession = '%s', score = %d, updated = %d WHERE id = %d", $form_state['values']['course_holder']['uid'],$form_state['values']['course_holder']['subject']  $form_state['values']['islocked'],  $form_state['values']['academicsession'], $form_state['values']['exam_score'],  $form_state['values']['updated'], $loaded['id']);
 
-  if($op == 'Save') {
-    //drupal_write_record($score_table, $form_state['values']);
-    db_query("INSERT INTO {score} (uid, programme, course, islocked, type, academicsession, overall, score, cascore, created) VALUES (%d, %d, %d, %d, '%s',  %d, %d, '%s', %d, %d)", $form_state['values']['course_holder']['uid'], $form_state['values']['programme'], $form_state['values']['programme_holder']['course'], $form_state['values']['islocked'], $form_state['values']['type'],
-      $form_state['values']['academicsession'], $form_state['values']['overall'], $form_state['values']['exam_score'], $form_state['values']['ca_score'], $form_state['values']['created']);  
+	$success = TRUE;
+	if($success) {
+	// TODO: grade update score
+		$updated_score = array(
+			'course' => $form_state['values']['course_holder']['subject'],
+			'uid' => $form_state['values']['course_holder']['uid'],
+			'islocked' => $form_state['values']['islocked'],
+			'academicsession' => $form_state['values']['academicsession'],
+			'exam_score' => $form_state['values']['exam_score'],
+			'submittedby' => ''
+		);
+	// module_invoke('acm_school', 'grade_update_score', $form_state['values']);
+	drupal_set_message('Update completed successfully');
+	return;
+	}
+	drupal_set_message('An error occurred while updating Score');
+	return FALSE;
+	}
 
-    $success = TRUE;
-    if($success) {
-      // TODO Invoke hook to grade new Score
-      $new_score = array(
-        'programme' => $form_state['values']['programme'],
-        'course' => $form_state['values']['programme_holder']['course'],
-        'uid' => $form_state['values']['course_holder']['uid'],
-        'islocked' => $form_state['values']['islocked'],
-        'academicsession' => $form_state['values']['academicsession'],
-        'overall' => $form_state['values']['overall'],
-        'exam_score' => $form_state['values']['exam_score'],
-        'ca_score' => $form_state['values']['ca_score'],
-        'submittedby' => 0
-      );
-      // grade_new_score
-      drupal_set_message('Score created successfully');
+	if($op == 'Save') {
+	//drupal_write_record($score_table, $form_state['values']);
+		db_query("INSERT INTO {score} (uid, course, islocked, academicsession, score, created) VALUES (%d, %d, %d, %s, %d, %d)", $form_state['values']['course_holder']['uid'],  $form_state['values']['course_holder']['subject'], $form_state['values']['islocked'], 
+		$form_state['values']['academicsession'], $form_state['values']['exam_score'],$form_state['values']['created']);  
+
+	$success = TRUE;
+	if($success) {
+		// TODO Invoke hook to grade new Score
+		$new_score = array(
+
+		'course' => $form_state['values']['course_holder']['subject'],
+		'uid' => $form_state['values']['course_holder']['uid'],
+		'islocked' => $form_state['values']['islocked'],
+		'academicsession' => $form_state['values']['academicsession'],
+		'exam_score' => $form_state['values']['exam_score'],
+		'submittedby' => 0
+	);
+	// grade_new_score
+	drupal_set_message('Score created successfully');
     }
   }
 }
@@ -1335,13 +1504,4 @@ function nurspri_school_views_api() {
     'path' => drupal_get_path('module', 'nurspri_school') . '/views',
   );
 }
-
-
-
-
-
-
-
-
-
 
