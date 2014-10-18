@@ -1,259 +1,1530 @@
 <?php 
-/*
- * Render student application profile items 
- * hook_acm_student_application()
+/**
+ * Implements hook_menu()
  */
-function proschool_acm_student_application(){
-	global $user;
-  switch($_GET['edit']) {
-  case 'app':
-      $profile = acm_school_profile_load($user->uid);
-      return drupal_get_form('acm_school_student_profile_form', (array)$profile->profile, NULL);
+function proschool_menu(){
+	$items = array();
+	$items['admission/apply/class'] = array(
+		'title' => t('Application to [School name]'),
+		'description' => t('Student application for admission to a school'),
+		'page callback' => 'drupal_get_form',
+		'page arguments' => array('proschool_admission_class_form'),
+		'access callback' => TRUE,
+		'access arguments' => array('')
+	);
+	$items['admission/apply/sponsor'] = array(
+		'title' => t('Application to [School name]'),
+		'description' => t('Student application for admission to a school'),
+		'page callback' => 'drupal_get_form',
+		'page arguments' => array('proschool_admission_sponsor_form'),
+		'access callback' => TRUE,
+		'access arguments' => array('')
+	);
+	$items['admission/apply/nextofkin'] = array(
+		'title' => t('Application to [School name]'),
+		'description' => t('Student application for admission to a school'),
+		'page callback' => 'drupal_get_form',
+		'page arguments' => array('proschool_admission_nextofkin_form'),
+		'access callback' => TRUE,
+		'access arguments' => array('')
+	);
+	$items['admission/apply/health'] = array(
+		'title' => t('Application to [School name]'),
+		'description' => t('Student application for admission to a school'),
+		'page callback' => 'drupal_get_form',
+		'page arguments' => array('proschool_admission_health_form'),
+		'access callback' => TRUE,
+		'access arguments' => array('')
+	);
+	// 
+	$items['admin/settings/school/subject/%acm_school_course/edit'] = array(
+		'title' => t('Configure Subject'),
+		'description' => t('School subject settings'),
+		'page callback' => 'drupal_get_form',
+		'page arguments' => array('proschool_addsubject_form', 4),
+		'access arguments' => array('administer course settings'),
+		'type' => MENU_CALLBACK,
+		'load arguments' => array(4)
+    );
+	// edit a student grade
+	$items['admin/settings/school/grade/%acm_school_grade/edit'] = array(
+		'title' => t('Edit Grade'),
+		'description' => t('Edit student grade'),
+		'page callback' => 'drupal_get_form',
+		'page arguments' => array('proschool_grade_form', 4),
+		'type' => MENU_CALLBACK,
+		'load arguments' => array(4)
+	);
+	// edit a student score
+	$items['admin/settings/school/score/%acm_school_score/edit'] = array(
+		'title' => t('Edit Score'),
+		'description' => t('Edit a student score'),
+		'page callback' => 'drupal_get_form',
+		'page arguments' => array('proschool_score_form', 4),
+		'access arguments' => array('score a student'),
+		'type' => MENU_CALLBACK,
+		'load arguments' => array(4)
+	);
+  return $items;
+}
+/**
+ * Implements hook_acm_roles 
+ * 
+ * Defines default roles needed in a university for school module
+ */
+function proschool_acm_roles() {
+	return array('head teacher');
+}
+
+/**
+ * Implements hook_acm_roles_perm
+ * 
+ * Assigns permission(s) to role(s) 
+ */
+function proschool_acm_roles_perm() {
+  
+}
+/**
+ * Implements hook_school_settings 
+ */
+function proschool_school_settings() {
+	$settings['type'] = 'configure';
+  
+	$settings['configure']['admission'] = array(
+		'title' => t('Set admission status'),
+		'callback url' => t('admin/settings/school/admission/status')
+	);
+	$settings['configure']['users'] = array(
+		'title' => 'Configure users',
+		'callback url' => 'admin/settings/school/users'
+	);
+	$settings['configure']['fees'] = array(
+		'title' => 'Setup Fees',
+		'callback url' => 'admin/settings/school/fees'
+	);
+	/*$settings['configure']['dorm'] = array(
+		'title' => 'Configure dormitory allocation',
+		'callback url' => 'admin/settings/school/dormitory'
+	); */
+	$settings['configure']['teacher'] = array(
+		'title' => 'Add teacher',
+		'callback url' => 'admin/settings/school/teacher/add'
+	);
+	$settings['configure']['grade'] = array(
+		'title' => 'Configure grading system',
+		'callback url' => 'admin/settings/school/grade/gradingsystem'
+	);
+	$settings['configure']['school_settings'] = drupal_get_form('proschool_school_settings_form');
+	return $settings;
+}
+
+/**
+ * Implements hook_admission_settings 
+ */
+function proschool_admission_settings($type) {
+	$settings['type'] = 'admission';
+	$settings['admission']['configure'] = array(
+		'title' => 'Configure',
+		'callback url' => 'admin/settings/school/'
+	);
+	$settings['admission']['view applications'] = array(
+		'title' => 'View applications',
+		'callback url' => 'admission/applications'
+	);
+	if($type == 'status') {
+		$settings['admission']['admission_status_form'] = drupal_get_form('proschool_admission_settings_form');
+	}
+	return $settings;
+}
+
+// menu callback
+// @Todo change to hook
+function proschool_admission_settings_form(&$form_state) {
+	$form['#attributes'] = array('class' => 'form-horizontal');
+	$form['admission_status'] = array(
+		'#type' => 'select',
+		'#title' => t('Admission status'),
+		'#default_value' => variable_get('admission_status', ''),
+		'#options' => array('Open', 'Closed'),
+		'#description' => t('Admission status'),
+	);
+	$form['academic_session'] = array(
+		'#type' => 'textfield',
+		'#title' => t('Academic session'),
+		'#default_value' => variable_get('academic_session', ''),
+		'#description' => t('Set the current academic session')
+	);
+	$form['#submit'][] = 'proschool_admission_settings_form_submit';
+	return system_settings_form($form);
+}
+function proschool_admission_settings_form_submit($form, &$form_state) {
+	$session = $form_state['values']['academic_session'];
+	AcademicSession::addAcademicSession($session);
+	// insert or update Admission object
+}
+function proschool_school_settings_form() {
+	$form['#attributes'] = array('class' => 'form-horizontal');
+	return system_settings_form($form);
+}
+/**
+ * implements hook_term_type
+ */
+function proschool_term_type() {
+	return variable_set('term_type', 'Annual');
+}
+/**
+ * Implements hook_faculty_settings 
+ */
+function proschool_faculty_settings($type) {
+	$settings['type'] = 'teacher';
+	$settings['teacher']['add'] = array(
+		'title' => t('Add'),
+		'callback url' => 'admin/settings/school/teacher/add'
+	);
+	$settings['teacher']['view'] = array(
+		'title' => 'View teacher',
+		'callback url' => 'teacher'
+	);
+	if($type == 'add') {
+		$settings['teacher']['add_teacher_form'] = drupal_get_form('proschool_teacher_form');
+	}
+  
+  return $settings;
+}
+/**
+ * Faculty add and edit form
+ * 
+ * @param type $form_state
+ * @param type $edit
+ * @return boolean 
+ */
+function proschool_teacher_form(&$form_state, $teacher = NULL, $edit = NULL) {
+	$edit = (empty($form_state['values'])) ? (array)$teacher : $form_state['values'];
+
+	if($edit) {
+		drupal_set_title('Edit teacher');
+	}else {
+		drupal_set_title('Add teacher');
+	}
+
+	$form['#attributes'] = array('class' => 'form-horizontal');
+	$form['name'] = array(
+		'#type' => 'textfield',
+		'#title' => t('Name'),
+		'#default_value' => $edit['name'],
+		'#required' => TRUE,
+		'#attributes' => array('class' => 'faculty-name'),
+	);
+	$form['machine_name'] = array(
+		'#type' => 'textfield',
+		'#title' => t('Machine-readable name'),
+		'#description' => t('Example: social_science'). '<br/>' .t('May only contain lowercase letters, numbers and underscores. <strong>Try to avoid conflicts with the names of existing modules.</strong>'),
+		'#required' => TRUE,
+		'#default_value' => $edit['machine_name'],
+		'#attributes' => array('class' => 'faculty-name-machine'),
+		'#element_validate' => array('acm_school_settings_validate_field'),
+	);
+	// If recreating this feature, disable machine name field and blank out
+	// js-attachment classes to ensure the machine name cannot be changed.
+	if (isset($edit)) {
+		$form['machine_name']['#value'] = $edit['name'];
+		$form['machine_name']['#disabled'] = TRUE;
+		$form['machine_name']['#attributes'] = array();
+	}
+	$form['description'] = array(
+		'#type' => 'textfield',
+		'#title' => t('Description'),
+		'#default_value' => $edit['description']
+	);
+	$form['teachercode'] = array(
+		'#type' => 'textfield',
+		'#title' => t('Teacher code'),
+		'#default_value' => $edit['teachercode'],
+		'#required' => TRUE
+	);
+	$form['emailsubdomain'] = array(
+		'#type' => 'textfield',
+		'#title' => t('Email subdomain'),
+		'#default_value' => $edit['emailsubdomain']
+	);
+	$form['submit'] = array(
+		'#type' => 'submit',
+		'#value' => isset($faculty) ? 'Update' : 'Save',
+		'#attributes' => array('class' => 'btn'),
+	);
+
+	$form['_teacher'] = array('#type' => 'value', '#value' => $edit);
+	if(!isset($teacher)) {
+		$form['created'] = array('#type' => 'value', '#value' => time());
+	}else {
+		$form['updated'] = array('#type' => 'value', '#value' => time());
+		$form['_loaded'] = array('#type' => 'value', '#value' => $teacher);
+	}
+	return $form;
+}
+
+function proschool_teacher_form_validate($form, &$form_state) {
+	$teacher = $form_state['values']['_teacher'];
+    $teacher_name = $form_state['values']['name'];
+    $teacher_code = $form_state['values']['teachercode'];
+    $fields = drupal_schema_fields_sql('faculty');
+
+    $op = $form_state['values']['op'];
+    if($op != 'Update') {
+        // does faculty name exist?
+        if(in_array($teacher_name, Faculty::listFaculty($fields))) {
+            form_error($form['name'], t('The teacher, @name already exist', array('@name' => $teacher_name)));
+        }
+        // does faculty_code exist?
+        if(in_array($teacher_code, Faculty::listFaculty($fields))) {
+            form_error($form['code'], t('The teacher code, @code already exist', array('@code' => $teacher_code)));
+        }
+    
+    }
+}
+function proschool_teacher_form_submit($form, &$form_state) {
+	$teacher = $form_state['values']['_teacher'];
+	$loaded = $form_state['values']['_loaded'];
+
+	/*$created = time();
+	$form_state['values']['created'] = $created;*/
+  
+	$teacher_table = 'faculty';
+  
+	$success = FALSE;
+  
+	if(!empty($teacher)) {
+	// it's an edit
+	//$success = drupal_write_record($faculty_table, $faculty, 'id');
+		db_query("UPDATE {faculty} SET name = '%s', facultycode ='%s', description = '%s', emailsubdomain = '%s', updated = %d WHERE id = %d", $form_state['values']['name'], $form_state['values']['teachercode'], $form_state['values']['description'], $form_state['values']['emailsubdomain'], $form_state['values']['updated'], $loaded['id']);
+	  $success = TRUE;
+	if($success) {
+		drupal_set_message('Update completed successfully');
+		return;
+	}
+	}
+
+	drupal_write_record($teacher_table, $form_state['values']);
+	$success = TRUE;
+	if($success) {
+		drupal_set_message('Teacher created successfully');
   }
-  switch($_GET['app']) {
-  case 'sponsor':
-      drupal_set_title('Sponsor');
-      $studentApplication = views_get_view('uni_student_application_view');
-      $studentApplication->display = 'sponsor';
-      break;
+}
+/**
+ * assign teacher for a subject
+ */
+function proschool_teacher_subj_form(&$form_state, $dept = NULL, $edit = NULL) {
+	// assign teacher for a subject
+}
+
+/**
+ * Validate teacher for a subject
+ */
+function proschool_teacher_sub_form_validate($form, &$form_state) {
+	// validate teacher for a subject
+}
+
+function proschool_teacher_sub_form_submit($form, &$form_state) {
+    // submit code
+}
+
+/**
+ * Implements hook_department_settings 
+ */
+function proschool_department_settings($type) {
+  //not required
+}
+function proschool_programme_settings($type) {
+   //not required
+}
+function proschool_programme_form(&$form_state, $programme = NULL, $edit = NULL) {
+   //not required
+}
+function proschool_programme_form_validate($form, &$form_state) {
+     //not required
+}
+function proschool_programme_form_submit($form, &$form_state) {
+    //not required
+}
+function proschool_student_application_table_info() {
+  $table['course_info'] = array(
+    'primary key' => 'id'
+  );
+  return $table;
+}
+
+/**
+ * 
+ * @param type $form_state
+ * @param type $edit
+ * 
+ */
+function proschool_addsubject_form(&$form_state, $subject = NULL, $edit = NULL) {
+    $edit = (empty($form_state['values'])) ? (array)$subject : $form_state['values'];
+  
+	if($edit) {
+		drupal_set_title('Edit subject');
+	}else {
+		drupal_set_title('Add subject');
+	}
+
+	// @todo $fields = module_invoke($module, 'course_field_info');
+	// snippet: if(isset($fields['title'])
+	$form['#attributes'] = array('class' => 'form-horizontal');
+	// subject title
+	$form['title'] = array(
+		'#type' => 'textfield',
+		'#title' => t('Subject title'),
+		'#description' => t('The subject title'),
+		'#default_value' => $edit['title'],
+		'#required' => TRUE
+	);
+	// level
+	$level = module_invoke('proschool', 'academic_level');
+	$form['level'] = array(
+		'#type' => 'select',
+		'#title' => t('Academic level'),
+		//'#options' => AcademicLevel::listAcademicLevels(),
+		//'#options' => drupal_map_assoc(array(100, 200, 300, 400, 500)),
+		'#options' => $level,
+		'#default_value' => $edit['level'],
+		'#required' => TRUE
+	);
+	// Subject code
+	$form['code'] = array(
+		'#type' => 'textfield',
+		'#title' => t('Subject code'),
+		'#description' => t('The subject code'),
+		'#default_value' => $edit['code'],
+		'#required' => TRUE
+	);
+	// academic session
+	$form['session'] = array(
+		'#type' => 'select',
+		'#title' => t('Academic session'),
+		'#description' => t('The academic session this course is available for'),
+		'#options' => AcademicSession::listAcademicSession(),
+		'#default_value' => $edit['session'],
+		'#required' => TRUE
+	);
+	// Teacher
+	$teachers = acm_school_get_users_in_a_role(37);
+	$form['teacherincharge'] = array(
+		'#type' => 'select',// separate by a comma
+		'#title' => t('Subject teacher'),
+		'#description' => t('Subject assigned to a teacher'),
+		'#options' => $teachers, // a list of lecturers in the school
+		'#default_value' => $edit['lecturerincharge'],
+		'#required' => TRUE
+	);
+	$form['exam_score_id'] = array(
+		'#type' => 'textfield',
+		'#title' => t('Exam score'),
+		'#description' => t('This subject exam score'),
+		'#default_value' => $edit['exam_score_id']
+	);
+	$form['maxexammark'] = array(
+		'#type' => 'textfield',
+		'#title' => t('Maximum exam mark'),
+		'#description' => t('An exam score maximum mark. For example, 100 is the maximum mark for an exam score of 50/100'),
+		'#default_value' => $edit['maxexammark']
+	);
+	$form['submit'] = array(
+		'#type' => 'submit',
+		'#value' => isset($course) ? 'Update' :  'Save',
+		'#attributes' => array('class' => 'btn'),
+	);
+  
+	$form['_subject'] = array('#type' => 'value', '#value' => $edit);
+	if(!isset($subject)) {
+		$form['created'] = array('#type' => 'value', '#value' => time());
+	} else {
+		$form['updated'] = array('#type' => 'value', '#value' => time());
+		$form['_loaded'] = array('#type' => 'value', '#value' => $subject);
+	}
+  
+  return $form;
+}
+function proschool_addsubject_form_validate($form, &$form_state) {
+    $subject = $form_state['values']['_subject'];
+    $subject_title = $form_state['values']['title'];
+    $subject_code = $form_state['values']['code'];
+    $fields = drupal_schema_fields_sql('academic_course');
+    $op = $form_state['values']['op'];
+
+    if($op != 'Update') {
+        // does subject title exist?
+        if(in_array($subject_title, Course::listCourses($fields))) {
+            form_error($form['title'], t('The subject title @title already exist', array('@title' => $subject_title)));
+        }
+        // does subject code exist?
+        if(in_array($subject_code, Course::listCourses($fields))) {
+            form_error($form['code'], t('The subject code @name already exist.', array('@code' => $subject_code)));
+        }
+    }
+}
+
+function proschool_addsubject_form_submit($form, &$form_state) {
+	$subject = $form_state['values']['_subject'];
+	$loaded = $form_state['values']['_loaded'];
+	$subject_table = 'academic_course';
+	$success = FALSE;
+  
+	if(!empty($subject)) {
+		db_query("UPDATE {academic_course} SET title = '%s',  code = '%s', level = '%s', session = '%s', lecturerincharge = '%s', exam_score_id = %d, maxexammark = %d, updated = %d WHERE id = %d", $form_state['values']['title'], $form_state['values']['code'],  $form_state['values']['level'], $form_state['values']['session'], $form_state['values']['teacherincharge'],$form_state['values']['exam_score_id'], $form_state['values']['maxtestmark'],  $form_state['values']['updated'], $loaded['id']);
+		
+		$success = TRUE;
+		if($success) {
+			drupal_set_message('Update completed successfully');
+			return;
+		}
+	}
+  
+	$success = drupal_write_record($subject_table, $form_state['values']);
+	$subject_id = db_fetch_object(db_query("SELECT MAX(id) as id FROM {$subject_table}"));
+	if($success) {
+		if(isset($subject_id)) {
+			call_user_func_array('acm_school_create_batch_course_content', array($subject_id));
+		}
+	} else {
+		drupal_set_message("Something dangerous happened! Couldn't save new Course", 'error');
+	}
+}
+
+
+function proschool_course_settings($course) {
+	$form['#attributes'] = array('class' => 'form-horizontal');
+	$form['exam_maximum_mark'] = array(
+		'#type' => 'textfield',
+		'#title' => t('Exam maximum mark'),
+		'#default_value' => variable_get('exam_maximum_mark', (int)'')
+	);
+	return system_settings_form($form);
+}
+
+/**
+ * Implements hook_grade_settings 
+ */
+function proschool_grade_settings($type){
+	$settings['type'] = 'grade';
+	$settings['grade']['grade a student'] = array(
+		'title' => 'Grade a student',
+		'callback url' => 'admin/settings/school/grade/add'
+	);
+	$settings['grade']['score a student'] = array(
+		'title' => 'Score a student',
+		'callback url' => 'admin/settings/school/score/add'
+	);
+	return $settings;
+}
+function proschool_gradingsystem_settings_form(&$form_state) {
+	//not needed
+}
+
+/**
+ * Implements hook_grade_local_country
+ *
+ * Grade point system by local country as seen here: http://en.wikipedia.org/wiki/Grading_systems_by_country
+ */
+function proschool_grade_local_country($country_code) {
+	//not needed
+}
+/**
+ * Implements hook_grade_ects
+ *
+ * Grade point system by ECTS http://en.wikipedia.org/wiki/ECTS_grading_scale
+ */
+function proschool_grade_ects() {
+	//not needed
+}
+/**
+ * Implements hook_grade_wes
+ *
+ * Grade point system by WES as seen at http://wenr.wes.org/2011/08/wenr-julyaugust-2011-practical-information/
+ */
+function proschool_grade_wes() {
+	//not needed
+}
+/**
+ * Computes student's current GPA. Computes student's GPA
+ * for the current semester/session
+ */
+function proschool_compute_current_gpa($uid, $latest_score) {
+    //not needed
+}
+/**
+ * Computes student's cumulative GPA
+ */
+function proschool_compute_cumulative_gpa($uid) {
+    //not needed
+}
+function proschool_gradepoint_settings_form() {
+	//not needed
+}
+function proschool_dept_gradepoint_settings_form() {
+	//not needed
+}
+
+function proschool_grade_form(&$form_state, $grade = NULL, $edit = NULL ) {
+	$edit = (empty($form_state['values']))? $grade : $form_state['values'];
+
+	if($edit) {
+		drupal_set_title('Edit Grade');
+	}else {
+		drupal_set_title('Add Grade');
+	}
+
+	$form['#attributes'] = array('class' => 'form-horizontal');
+	$students = acm_school_get_users_in_a_role(29);
+
+	// student uid
+	$form['uid'] = array(
+		'#type' => 'select',
+		'#title' => t('Student'),
+		'#description' => t('Select student to grade'),
+		'#options' => $students,
+		'#default_value' => $edit['uid'],
+		'#required' => TRUE
+	);
+	// automatically populated when student uid is selected
+	$form['subject'] = array(
+		'#type' => 'select',
+		'#title' => t('Subject'),
+		'#description' => t('Student subject'),
+		'#options' => array(),
+		'#default_value' => $edit['subject'],
+		'#required' => TRUE 
+	);
+	$form['dropped'] = array(
+		'#type' => 'checkbox',
+		'#title' => t('Is subject dropped?'),
+		'#description' => t('Whether subject is dropped or not'),
+		'#default_value' => $edit['dropped']
+	);
+	$form['grade'] = array(
+		'#type' => 'textfield',
+		'#title' => t('Grade'),
+		'#description' => t('Grade representation of a score based on Grading system'),
+		'#default_Value' => $edit['grade']
+	); 
+	$form['exam_score_id'] = array(
+		'#type' => 'textfield',
+		'#title' => t('Exam score'),
+		'#description' => t('Student exam score'),
+		'#default_value' => $edit['exam_score_id'],
+		'#required' => TRUE 
+	);
+	$form['submittedby'] = array(
+		'#type' => 'select',
+		'#title' => t('Submitted by'),
+		'#description' => t('Select the teacher who submitted the grade'),
+		'#default_value' => $edit['submittedby'],
+		'#options' => array(),
+		'#required' => TRUE
+	);
+	$form['submitted'] = array(
+		'#type' => 'checkbox',
+		'#title' => t('Submitted for approval?'),
+		'#description' => t('Whether this grade is submitted for approval or not'),
+		'#default_value' => $edit['submitted'],
+		'#required' => TRUE
+	);
+	$form['approved'] = array(
+		'#type' => 'checkbox',
+		'#title' => t('Is grade approved?'),
+		'#description' => t('Whether this grade has been approved or not'),
+		'#default_value' => $edit['approved']
+	);
+  
+	$form['submit'] = array(
+		'#type' => 'submit',
+		'#value' => isset($score) ? 'Update' : 'Save',
+		'#attributes' => array('class' => 'btn'),
+	);
+	$form['_grade'] = array('#type' => 'value', '#value' => $edit);
+	$form['created'] = array('#type' => 'value', '#value' => time());
+	if(isset($grade)) {
+		$form['state'] = array('#type' => 'value', '#value' => 'update');
+		$form['updated'] = array('#type' => 'value', '#value' => time());
+		$form['_loaded'] = array('#type' => 'value', '#value' => $grade);
+	}
+	return $form;
+}
+function proschool_grade_form_validate($form, &$form_state) {
+
+}
+function proschool_grade_form_submit($form, &$form_state) {
+
+}
+/**
+ * 
+ * @return type 
+ */
+function proschool_grade_settings_form() {
+	
+}
+/**
+ * Implements hook_fees_type 
+ */
+function proschool_fees_type() {
+	return array('General');
+}
+/**
+ * implements hook_faculty 
+ */
+function proschool_faculty() {
+	//not needed
+}
+/**
+ * implements hook_department 
+ */
+function proschool_department() {
+	//not needed
+}
+/**
+ * Implements hook_grade 
+ */
+function proschool_grade() {
+	//not needed
+}
+/**
+ * Implements hook_fees 
+ */
+function proschool_fees() {
+	//not needed
+}
+
+/**
+ * Implements hook_admission 
+ * 
+ * Landing page of Admission
+ */
+function proschool_admission() {
+	$admission_view = views_get_view('uni_admission_view');
+	return $admission_view;
+}
+/**
+ * Implements hook_fees_catalog 
+ */
+function proschool_fees_catalog_info() {
+	return array('');
+}
+
+/**
+ * Implements hook_acm_student_application 
+ */
+function proschool_acm_student_application() {
+  global $user;
+  // profile = StudentProfile::getStudentProfile($user);
+  // courseinfo = CourseInfo::getCourseInfo($user);
+  // student_sponsorinfo = SponsorsInfo::getSponsors($user);
+  // student_nextofkininfo = NextOfKinInfo::getNextOfKinInfo($user);
+  // student_healthinfo = HealthInfo::getHealthInfo($user);
+  // student_results = ExaminationResult::getResults($user);
+  // studentApplication = new StudentApplication($user);
+    
+	switch($_GET['edit']) {
+	case 'app':
+		$profile = acm_school_profile_load($user->uid);
+		return drupal_get_form('acm_school_student_profile_form', (array)$profile->profile, NULL);
+	}
+	switch($_GET['app']) {
+	case 'sponsor':
+		drupal_set_title('Sponsor');
+		$studentApplication = views_get_view('uni_student_application_view');
+		$studentApplication->display = 'sponsor';
+	break;
     case 'course':
-      drupal_set_title('Course');
+		drupal_set_title('Course');
         $studentApplication = views_get_view('uni_student_application_view');
         $studentApplication->display = 'course';
-        break;
+    break;
     case 'nextofkin':
-      drupal_set_title('Next of Kin');
+		drupal_set_title('Next of Kin');
         $studentApplication = views_get_view('uni_student_application_view');
         $studentApplication->display = 'nextofkin';
-        break;
+    break;
     default:
         $studentApplication = views_get_view('uni_student_application_view');
         $studentApplication->display = 'default';
-        break;
+    break;
   }
   return $studentApplication;
-
 }
-/*
- * hook represents a label of items that should be configured for student application
- * profile view
- * hook_acm_student_application_items()
+
+/**
+ * Implements hook_student_application_items
  */
-function proschool_acm_student_application_items(){
-  $items = array();
-  $items['sponsor'] = array(
-    'data' => l('Sponsor Information', 'application/sponsor')
-  );
-  $items['course'] = array(
-    'data' => l('Course Information', 'application/course')
-);
-  return $items;
-
-
+function proschool_student_application_items() {
+	$items = array();
+	$items['sponsor'] = array(
+		'data' => l('Sponsor Information', 'application/sponsor')
+	);
+	$items['course'] = array(
+		'data' => l('Course Information', 'application/course')
+	);
+	return $items;
 }
-/*
- * Defines the next step after admission application
- * hook_admission_application_info()
+/**
+ * Proposal: A proposal to replace acm_school_admission_application_callback
+ * 
+ * This hook defines the structure of admission application steps that 
+ * can be implemented per school type. At the end of every application step,
+ * this hook is looked up to determine what application form is next
+ * 
+ * @example 
  */
-function proschool_admission_application_info(){
+function proschool_admission_application_info() {
 	$application_form = array(
-    'course' => array(
-      'title' => 'course',
-      'form_id' => 'uni_school_admission_course_form'
-    ),
-    'sponsor' => array(
-      'title' => 'sponsor',
-      'form_id' => 'uni_school_admission_sponsors_form'
-    ),
-    'nextofkin' => array(
-      'title' => 'nextofkin',
-      'form_id' => 'uni_school_admission_nextofkin_form'
-    ),
-    'health' => array(
-      'title' => 'health',
-      'form_id' => 'uni_school_admission_health_form'
-    ),
-  );
-  return $application_form;
-
+		//'profile' => drupal_get_form('formid')
+		/*'profile' => array(
+		  'form_id' => 'uni_school_admission_form'
+		),*/
+		'class' => array(
+		  'title' => 'class',
+		  'form_id' => 'proschool_admission_class_form'
+		),
+		'sponsor' => array(
+		  'title' => 'sponsor',
+		  'form_id' => 'proschool_admission_sponsors_form'
+		),
+		'nextofkin' => array(
+		  'title' => 'nextofkin',
+		  'form_id' => 'proschool_admission_nextofkin_form'
+		),
+		'health' => array(
+		  'title' => 'health',
+		  'form_id' => 'proschool_admission_health_form'
+		),
+		// to be implemented
+		/*'examresults' => array(
+		  'title' => 'examresults',
+		  'form_id' => 'proschool_admission_examresults_form'
+		)*/
+	);
+	return $application_form;
 }
-/*
- * This hook defines the setting for school admission 
- * hook_admission_settings($type)
- */
-function proschool_admission_settings($type){
-	 if($type == 'status') {
-    $settings['admission']['admission_status_form'] = drupal_get_form('uni_school_admission_settings_form');
-  }
-  return $settings;
 
-}
-/*
- * setting for structure of each Academic module
- * hook_school_settings()
+/**
+ * Implements hook_admission_form_id
+ * @return string 
  */
-function proschool_school_settings(){
-	 $settings['type'] = 'configure';
+function proschool_admission_form_id() {
+	return 'proschool_admission_form';
+}
+function proschool_admission_class_form(&$form_state, $class_info, $steps_order, $hook) {
+	$edit = (empty($form_state['values'])) ? (array)$class_info : $form_state['values'];
   
-  $settings['configure']['admission'] = array(
-    'title' => t('Set admission status'),
-    'callback url' => t('admin/settings/school/admission/status')
-  );
-  $settings['configure']['users'] = array(
-    'title' => 'Configure users',
-    'callback url' => 'admin/settings/school/users'
-  );
-  $settings['configure']['fees'] = array(
-    'title' => 'Setup Fees',
-    'callback url' => 'admin/settings/school/fees'
-  );
-  $settings['configure']['dorm'] = array(
-    'title' => 'Configure dormitory allocation',
-    'callback url' => 'admin/settings/school/dormitory'
-  );
-  $settings['configure']['faculty'] = array(
-    'title' => 'Add faculty',
-    'callback url' => 'admin/settings/school/faculty/add'
-  );
-  $settings['configure']['department'] = array(
-    'title' => 'Add department',
-    'callback url' => 'admin/settings/school/department/add'
-  );
-  $settings['configure']['grade'] = array(
-    'title' => 'Configure grading system',
-    'callback url' => 'admin/settings/school/grade/gradingsystem'
-  );
+	$form['#attributes'] = array('class' => 'form-horizontal');
+	$form['class_info'] = array(
+		'#type' => 'markup',
+		'#value' => '<div style="background:#f6f6f2; padding:5px">Class Information</div>',
+	);
+	$form['level'] = array(
+		'#type' => 'select',
+		'#title' => t('Academic level'),
+		'#default_value' => $edit['level'],
+		'#required' => TRUE,
+		'#options' => array('100', '200', '300', '400', '500'),
+	);
+	$form['yearofentry'] = array(
+		'#type' => 'select',
+		'#title' => t('Year of entry'),
+		'#options' => array('2014', '2015'),
+		'#default_value' => $edit['yearofentry'],
+		'#required' => TRUE,
+	);
+	$form['registeredsession'] = array(
+		'#type' => 'select',
+		'#title' => t('Academic session'),
+		'#default_value' => $edit['registeredsession'], // the current academic session
+		'#options' => AcademicSession::listAcademicSession(),
+		'#description' => t('The academic session you are registering for'),
+		'#required' => TRUE,
+	);
+	$form['submit'] = array(
+		'#type' => 'submit',
+		'#value' => 'Save and continue',
+		'#attributes' => array('class' => 'btn')
+	);
+	$form['_current'] = array('#type' => 'value', '#value' => $hook);
+	$form['_next'] = array('#type' => 'value', '#value' => 'sponsor');
+	$form['_steps'] = array('#type' => 'value', '#value' => $steps_order);
+	$form['_class_info'] = array('#type' => 'value', '#value' => $class_info);
   
-  $settings['configure']['school_settings'] = drupal_get_form('uni_school_school_settings_form');
+	return $form;
+}
+function proschool_admission_class_form_submit($form, &$form_state) {
+	$current = $form_state['values']['_current'];
+	$next = $form_state['values']['_next'];
+	$class_info = $form_state['values']['_class_info'];
   
-  return $settings;
-
-}
-/*
- * view of student application made into a school
- * hook_admission_application_list()
- */
-function proschool_admission_application_list(){
-  $admission_view = views_get_view('uni_admission_view');
-  return $admission_view;
-}
-/*
- * Describe the academic level of a school
- * hook_academic_level()
- */
-function proschool_academic_level(){
- return drupal_map_assoc(array(100, 200, 300, 400, 500, 600, 700));
-
-}
-/*
- * display all the faculties in a school
- * hook_faculty()
- */
-function proschool_faculty(){
-
-}
-/*
- * Display all the departments in a school
- * hook_department()
- */
-function proschool_department(){
-
-}
-/*
- * Display all student grade in a school
- * hook_grade()
- */
-function proschool_grade(){
-// For example, a university school type grade display
-  $grade_view = views_get_view('uni_grade_view');
-  return $grade_view;
-}
-
-
-/*
- * Configure all the grade settings for a school
- * hook_grade_settings()
- */
-function proschool_grade_settings($type){
-$settings['type'] = 'grade';
-  $settings['grade']['configure'] = array(
-    'title' => t('Configure grading system'),
-    'callback url' => 'admin/settings/school/grade/gradingsystem'
-  );
-  // set global grading point
-  $settings['grade']['grade point'] = array(
-    'title' => 'Set grade point',
-    'callback url' => 'admin/settings/school/grade/gradepoint'
-  );
-  // set grading point for a specific department
-  // A staff in medicine department should be able to contact the IT
-  // staff (Acadaman authorized user) to set medicine department
-  // grade point to 7
-  $settings['grade']['department grade point'] = array(
-    'title' => 'Set department grade point',
-    'callback url' => 'admin/settings/school/grade/dept_gradepoint'
-  );
-  $settings['grade']['grade a student'] = array(
-    'title' => 'Grade a student',
-    'callback url' => 'admin/settings/school/grade/add'
-  );
-  $settings['grade']['score a student'] = array(
-    'title' => 'Score a student',
-    'callback url' => 'admin/settings/school/score/add'
-  );
-  if($type == 'gradingsystem') {
-    $settings['grade']['gradingsystem_form'] = drupal_get_form('uni_school_gradingsystem_settings_form');
-  }
-  if($type == 'gradepoint') {
-    $settings['grade']['gradepoint_form'] = drupal_get_form('uni_school_gradepoint_settings_form'); 
-  }
-  if($type == 'dept_gradepoint') {
-    $settings['grade']['dept_gradepoint_form'] = drupal_get_form('uni_school_dept_gradepoint_settings_form');
-  }
-  if($type == 'add') {
-    $settings['grade']['grade_form'] = drupal_get_form('uni_school_grade_form');
-  }
+	$class_info_table = 'course_info';
+	$tracker = db_result(db_query("SELECT step FROM {student_application_tracker} WHERE email = '%s'", $email));
+	$success = FALSE;
   
-  return $settings;
-}
-/*
- * Configured all the score settings for a school
- * hook_score_settings()
- */
-function proschool_score_settings($type){
-$settings['type'] = 'score';
-  if($type == 'add') {
-    $settings['score']['score_form'] = drupal_get_form('uni_school_score_form');
-  }
-  return $settings;
-
-}
-/*
- * Display fee catalog of a school
- * hook_fees_catalog()
- */
-function proschool_fees_catalog(){
-return array('General', 'Program Specific');
+	if(!empty($class_info)) {
+		// it's an edit
+		$success = drupal_write_record($class_info_table, $class_info, 'id');
+		if($success) {
+		  drupal_set_message('Update completed successfully');
+		  return;
+		}
+	}
+  
+	drupal_write_record($class_info_table, $form_state['values']);
+	// also update student_application_tracker
+	$tracker_data = array('email' => base64_decode($_GET['c']), 'step' => $next);
+	drupal_write_record('student_application_tracker', $tracker_data, 'email');
+  
+	$success = TRUE;
+	if($success) {
+		drupal_goto('admission/apply', 'step=' . $next . '&c=' . $_GET['c']); 
+	}
 }
 
-/*
- * Display fee catalog of a school
- * hook_setup_tasks()
+/**
+ * Saves or update course_info 
  */
- 
-  function proschool_setup_tasks(){
- // Example setup tasks for a University school type.
-  if($_GET['step'] == 'setup') {
-    $step = 'add-faculty';
-    $output = drupal_get_form('uni_school_setup_faculty_form');
-    variable_set('setup_step', 'faculty');
-  }
+function proschool_course_info_save() {
   
-  if($_GET['step'] == 'course'){
-    $step = 'add-course';
-    $output = drupal_get_form('uni_school_setup_course_form');
-    variable_set('setup_step', 'course');
-  }
+}
+
+/**
+ * Menu callback for admission/apply/sponsor
+ * @return string 
+ */
+function proschool_admission_sponsors_form(&$form_state, $sponsors_info, $steps_order, $hook) {
+	$edit = (empty($form_state['values'])) ? (array)$sponsors_info : $form_state['values'];
+	$form['#attributes'] = array('class' => 'form-horizontal');
+	$form['sponsors'] = array(
+		'#type' => 'markup',
+		'#value' => '<div style="background:#f6f6f2; padding:5px">Sponsors Information</div>',
+	);
+	$form['name'] = array(
+		'#type' => 'textfield',
+		'#title' => t('Full names'),
+		'#default_value' => $edit['name'],
+		'#required' => TRUE,
+	);
+	$form['address1'] = array(
+		'#type' => 'textfield',
+		'#title' => t('Address1'),
+		'#default_value' => $edit['address1'],
+		'#required' => TRUE,
+	);
+	$form['address2'] = array(
+		'#type' => 'textfield',
+		'#title' => t('Address2'),
+		'#default_value' => $edit['address2'],
+	);
+	$form['nationality'] = array(
+		'#type' => 'select',
+		'#title' => t('Nationality'),
+		'#options' => array(0 => 'Nigeria', 1 => 'Togo'),
+		'#default_value' => $edit['nationality'],
+		'#required' => TRUE,
+	);
+	$form['state'] = array(
+		'#type' => 'select',
+		'#title' => t('State'),
+		'#options' => array(0 => 'Other'),
+		'#default_value' => $edit['state'],
+		'#required' => TRUE,
+	);
+	$form['phone'] = array(
+		'#type' => 'textfield',
+		'#title' => t('Phone'),
+		'#default_value' => $edit['phone'],
+	);
+	$form['mobile'] = array(
+		'#type' => 'textfield',
+		'#title' => t('Mobile'),
+		'#default_value' => $edit['mobile'],
+		'#required' => TRUE
+	);
+	$form['submit'] = array(
+		'#type' => 'submit',
+		'#value' => 'Next',
+		'#attributes' => array('class' => 'btn')
+	);
+  	$form['_current'] = array('#type' => 'value', '#value' => $hook);
+	$form['_next'] = array('#type' => 'value', '#value' => 'nextofkin');
+	$form['_steps'] = array('#type' => 'value', '#value' => $steps_order);
+	$form['_sponsors_info'] = array('#type' => 'value', '#value' => $sponsors_info);
   
+  return $form;
+}
+
+function proschool_admission_sponsors_form_submit($form, &$form_state) {
+	$current = $form_state['values']['_current'];
+	$next = $form_state['values']['_next'];
+	$sponsors_info = $form_state['values']['_sponsors_info'];
+
+	$sponsors_info_table = 'sponsors_info';
+	$success = FALSE;
+  
+	if(!empty($sponsors_info)) {
+		// it's an edit
+		$success = drupal_write_record($sponsors_info_table, $sponsors_info, 'id');
+		if($success) {
+		  drupal_set_message('Update completed successfully');
+		  return;
+		}
+	}
+	drupal_write_record($sponsors_info_table, $form_state['values']);
+	// also update student_application_tracker
+	$tracker_data = array('email' => base64_decode($_GET['c']), 'step' => $next);
+	drupal_write_record('student_application_tracker', $tracker_data, 'email');  
+
+	// update student_application
+	$student_application['sponsors_infoid'] = db_last_insert_id($sponsors_info_table, 'id');
+	drupal_write_record('student_application', $student_application, 'id');
+	$success = TRUE;
+	
+	if($success) {
+		drupal_goto('admission/apply', 'step=' . $next . '&c=' . $_GET['c']); 
+	}
+}
+/**
+ * Save or update sponsors_info 
+ */
+function proschool_sponsors_save() {
+  
+}
+
+function proschool_admission_nextofkin_form(&$form_state, $nextofkin_info, $steps_order, $hook) {
+	$edit = (empty($form_state['values'])) ? (array)$nextofkin_info : $form_state['values'];
+
+	// register previous form as sponsors (this is kind of optional)
+	$form['#attributes'] = array('class' => 'form-horizontal');
+	$form['nextofkin'] = array(
+		'#type' => 'markup',
+		'#value' => '<div style="background:#f6f6f2; padding:5px">Next of kin Information</div>',
+	);
+	$form['name'] = array(
+		'#type' => 'textfield',
+		'#title' => t('Full names'),
+		'#default_value' => $edit['name'],
+		'#required' => TRUE,
+	);
+	$form['address1'] = array(
+		'#type' => 'textfield',
+		'#title' => t('Address1'),
+		'#default_value' => $edit['address1'],
+		'#required' => TRUE,
+	);
+	$form['address2'] = array(
+		'#type' => 'textfield',
+		'#title' => t('Address2'),
+		'#default_value' => variable_get('address2', ''),
+	);
+	$form['relationship'] = array(
+		'#type' => 'select',
+		'#title' => t('Relationship'),
+		'#options' => NextOfKinRelationship::listNextOfKinRelationship(),
+		'#default_value' => $edit['relationship'],
+		'#required' => TRUE,
+	);
+	$form['phone'] = array(
+		'#type' => 'textfield',
+		'#title' => t('Phone'),
+		'#default_value' => $edit['phone'],
+	);
+	$form['mobile'] = array(
+		'#type' => 'textfield',
+		'#title' => t('Mobile'),
+		'#default_value' => $edit['mobile'],
+		'#required' => TRUE,
+	);
+	$form['submit'] = array(
+		'#type' => 'submit',
+		'#value' => 'Next',
+		'#attributes' => array('class' => 'btn')
+	);
+
+	$form['_current'] = array('#type' => 'value', '#value' => $hook);
+	$form['_next'] = array('#type' => 'value', '#value' => 'health');
+	$form['_steps'] = array('#type' => 'value', '#value' => $steps_order);
+	$form['_nextofkin_info'] = array('#type' => 'value', '#value' => $nextofkin_info);
+  return $form;
+}
+
+function proschool_admission_nextofkin_form_submit($form, &$form_state) {
+	$next = $form_state['values']['_next'];
+	$nextfkin_info = $form_state['values']['_nextofkin_info'];
+
+	$nextofkin_info_table = 'next_of_kin_info';
+	$success = FALSE;
+	if(!empty($nextfkin_info)) {
+	// it's an edit
+	$success = drupal_write_record($nextofkin_info_table, $nextfkin_info, 'id');
+	if($success) {
+		drupal_set_message('Update completed successfully');
+		return;
+	}
+	}
+
+	drupal_write_record($nextofkin_info_table, $form_state['values']);
+	// also update student_application_tracker
+	$tracker_data = array('email' => base64_decode($_GET['c']), 'step' => $next);
+	drupal_write_record('student_application_tracker', $tracker_data, 'email');
+
+	// update student_application
+	$student_application['next_of_kin_infoid'] = db_last_insert_id($nextofkin_info_table, 'id');
+	drupal_write_record('student_application', $student_application, 'id');
+
+	$success = TRUE;
+	if($success) {
+		drupal_goto('admission/apply', 'step=' . $next . '&c=' . $_GET['c']); 
+	}
+}
+
+/**
+ * Save or update nextofkin_info 
+ */
+function proschool_nextofkin_save() {
+  
+}
+
+function proschool_admission_health_form(&$form_state, $health_info, $steps_order, $hook) {
+	$form['#attributes'] = array('class' => 'form-horizontal');
+	$form['sponsors'] = array(
+		'#type' => 'markup',
+		'#value' => '<div style="background:#f6f6f2; padding:5px">Health Information</div>',
+	);
+	$form['status'] = array(
+		'#type' => 'select',
+		'#title' => t('Status'),
+		'#options' => HealthStatus::listHealthStatus(),
+		'#default_value' => $edit['health'], 
+		'#required' => TRUE,
+	);
+	$form['disabilities'] = array(
+		'#type' => 'select',
+		'#title' => t('Disabilities'),
+		'#options' => HealthDisabilities::listHealthDisabilities(),
+		'#default_value' => $edit['disabilities'], 
+	);
+	$form['submit'] = array(
+		'#type' => 'submit',
+		'#value' => 'Next',
+		'#attributes' => array('class' => 'btn')
+	);
+
+	$form['_current'] = array('#type' => 'value', '#value' => $hook);
+	$form['_next'] = array('#type' => 'value', '#value' => 'finished');
+	$form['_steps'] = array('#type' => 'value', '#value' => $steps_order);
+	$form['_health_info'] = array('#type' => 'value', '#value' => $health_info);
+
+	return $form;
+}
+
+function proschool_admission_health_form_submit($form, &$form_state) {
+	$next = $form_state['values']['_next'];
+	$health_info = $form_state['values']['_health_info'];
+
+	$health_info_table = 'health_info';
+	$success = FALSE;
+
+	if(!empty($health_info)) {
+	// it's an edit
+		$success = drupal_write_record($health_info_table, $health_info, 'id');
+		if($success) {
+		  drupal_set_message('Update completed successfully');
+		  return;
+		}
+	}
+	drupal_write_record($health_info_table, $form_state['values']);
+	// also update student_application_tracker
+	$tracker_data = array('email' => base64_decode($_GET['c']), 'step' => $next);
+	drupal_write_record('student_application_tracker', $tracker_data, 'email');
+
+	// update student_application
+	$student_application['health_infoid'] = db_last_insert_id($health_info_table, 'id');
+	drupal_write_record('student_application', $student_application, 'id');
+
+	$success = TRUE;
+	if($success) {
+		drupal_goto('admission/apply', 'step=' . $next . '&c=' . $_GET['c']); 
+	}
+}
+/**
+ * Save or update health_info
+ */
+function proschool_health_save() {
+  
+}
+
+/**
+ * @todo Implement examresults upload functionality and submit callback
+ * 
+ * @param type $form_state
+ * @param type $profile
+ * @param type $steps_order
+ * @param type $hook
+ * @return string 
+ */
+function proschool_admission_examresults_form(&$form_state, $profile, $steps_order, $hook) {
+	$form['#attributes'] = array('class' => 'form-horizontal');
+	$form['examresults'] = array(
+		'#type' => 'markup',
+		'#value' => '<div style="background:#f6f6f2; padding:5px">Academic results</div>',
+	);
+	$form['subject'] = array(
+		'#type' => 'textfield',
+		'#title' => t('Subject'),
+		'#default_value' => variable_get('level', ''),
+		//'#required' => TRUE,
+	);
+	$form['grade'] = array(
+		'#type' => 'textfield',
+		'#title' => t('Grade'),
+		'#default_value' => variable_get('programme', ''), 
+		//'#required' => TRUE,
+	);
+	$form['institution'] = array(
+		'#type' => 'textfield',
+		'#title' => t('Institution'),
+		'#default_value' => variable_get('modeofentry', ''), 
+		//'#required' => TRUE,
+	);
+	$form['qualification'] = array(
+		'#type' => 'textfield',
+		'#title' => t('Qualification'),
+		'#default_value' => variable_get('matric_no', ''),
+	);
+	$form['submit'] = array(
+		'#type' => 'submit',
+		'#value' => 'Save',
+		'#attributes' => array('class' => 'btn')
+	);
+
+	$form['_current'] = array('#type' => 'value', '#value' => $hook);
+	$form['_next'] = array('#type' => 'value', '#value' => 'finished');
+	$form['_steps'] = array('#type' => 'value', '#value' => $steps_order);
+
+  return $form;
+}
+
+function proschool_admission_examresults_form_submit($form, &$form_state) {
+	$current = $form_state['values']['_current'];
+	$steps = $form_state['values']['_steps'];
+	$next = $form_state['values']['_next'];
+	drupal_goto('admission/apply', 'step=' . $next);
+  
+	//return $form_state['redirect'] = 'admission/apply/examresults';
+}
+/**
+ * Save or update examresults 
+ */
+function proschool_examresults_save() {
+  
+}
+
+/**
+ * Implements hook_setup_tasks 
+ *
+ * @see acm_school_setup
+ */
+function proschool_setup_tasks() {
+	// invoke steps_list here so we can pass on the next step
+	if($_GET['step'] == 'setup') {
+		$step = 'add-teacher';
+		$output = drupal_get_form('proschool_setup_teacher_form');
+		variable_set('setup_step', 'teacher');
+	}
+	if($_GET['step'] == 'class'){
+		$step = 'add-class';
+		$output = drupal_get_form('proschool_setup_class_form');
+		variable_set('setup_step', 'class');
+	}
   return $output;
 }
+
+function proschool_setup_teacher_form() {
+	$form['#attributes'] = array('class' => 'form-horizontal');
+	$form['name'] = array(
+		'#type' => t('textfield'),
+		'#title' => t('Name'),
+		'#description' => t('Enter a teacher name'),
+	);
+	$form['description'] = array(
+		'#type' => t('textfield'),
+		'#title' => t('Description'),
+		'#description' => t('Enter a description'),
+	);
+	$form['teacher_code'] = array(
+		'#type' => t('textfield'),
+		'#title' => t('Teacher code'),
+		'#description' => t('Enter a code for this teacher'),
+	);
+	$form['email_subdomain'] = array(
+		'#type' => t('textfield'),
+		'#title' => t('Email subdomain'),
+		'#description' => t('Enter an email subdomain for this teacher. E.g'),
+	);
+	$form['submit'] = array(
+		'#type' => 'submit',
+		'#value' => 'Save and continue',
+		'#attributes' => array('class' => 'btn')
+	);
+  return $form;
+}
+
+function proschool_setup_teacher_form_submit($form, &$form_state) {
+	drupal_goto('setup', 'step=class'); // $steps['next'];
+}
+
+function proschool_setup_class_form() {
+	$form['#attributes'] = array('class' => 'form-horizontal');
+	$form['submit'] = array(
+		'#type' => 'submit',
+		'#value' => 'Save and continue',
+		'#attributes' => array('class' => 'btn')
+	);
+  return $form;
+}
+
+function proschool_setup_class_form_submit($form, &$form_state) {
+	drupal_goto('setup', 'step=finished');
+}
+
+/**
+ * implements hook_admission_applications_list 
+ * 
+ * Implementation of a list of admission applications (report)
+ */
+function proschool_admission_applications_list() {
+	$admission_applications = views_get_view('uni_admission_applications');
+	return $admission_applications;
+}
+
+/**
+ * Loads the current user course_info object
+ * 
+ * User must have role Student
+ * 
+ * @param type $uid 
+ */
+function proschool_admission_class_load($uid) {
+  
+}
+/**
+ * class_info(id) and uid are loaded from uri due to calls to
+ * proschool_class_load and acm_school_profile_load
+ * 
+ * @param type $course 
+ */
+function proschool_admission_class_edit($uid) {
+    // load the class_info object by calling proschool_class_load
+    $class_info = proschool_admission_class_load($uid);
+    return drupal_get_form('proschool_admission_class_form', $class_info, NULL, NULL); 
+}
+/**
+ * Load course_info object from db
+ *
+ * @see proschool_admission_course_load
+ */
+function proschool_course_load($uid) {
+
+}
+/**
+ * Implements hook_academic_level
+ */
+function proschool_academic_level() {
+    return drupal_map_assoc(array(100, 200, 300, 400, 500, 600, 700));
+}
+/**
+ * Implements hook_student_course
+ */
+function proschool_student_class() {
+
+}
+/**
+ * Implements hook_score_settings
+ *
+ */
+function proschool_score_settings($type) {
+	$settings['type'] = 'score';
+	$settings['score']['score a student'] = array(
+		'title' => 'Score a student',
+		'callback url' => 'admin/settings/school/score/add'
+	);
+	if($type == 'add') {
+		$settings['score']['score_form'] = drupal_get_form('proschool_score_form');
+	}
+
+  return $settings;
+}
+
+function proschool_score_form(&$form_state, $score = NULL, $edit = NULL) {
+
+	$edit = (empty($form_state['values'])) ? (array)$score : $form_state['values'];
+	//dsm($edit);
+	if($edit) {
+		//TODO: drupal js here to tell client-side that it's edit.
+		drupal_add_js(array('score' => array('context' => 'score-form-edit')), 'setting');
+		drupal_set_title('Edit Score');
+	}else {
+		drupal_set_title('Add Score');
+	}
+	$form['programme_holder'] = array(
+		'#tree' => TRUE,
+		'#prefix' => '<div id="programme-wrapper">',
+		'#suffix' => '</div>',
+	);
+
+	$classes = isset($programme) ? Course::getCoursesByProgramme($programme) : array();
+	// class
+	// a list of classes registered by the student
+	$form['programme_holder']['class'] = array(
+		'#type' => 'select',
+		'#title' => t('Class'),
+		'#description' => t('Select the student class'),
+		'#options' => $classes,
+		'#default_value' => $edit['course'],
+		'#ahah' => array(
+		  'path' => 'score/ahah/course/callback',
+		  'wrapper' => 'course-wrapper',
+		  'event' => 'change', // default value: does not need to be set explicitly.
+		'#required' => TRUE
+		)
+	);
+	$form['class_holder'] = array(
+		'#tree' => TRUE,
+		'#prefix' => '<div id="course-wrapper">',
+		'#suffix' => '</div>',
+	);
+	$class = isset($edit['course']) ? $edit['course'] : NULL;
+
+	$students = (isset($class) || !empty($class)) ? StudentCourse::listStudentsByRegisteredCourse($class, 'uid') : array(955 => 'Kayode Odeyemi');
+
+	$form['class_holder']['uid'] = array(
+		'#type' => 'select',
+		'#title' => t('Student'),
+		'#description' => t('Select the student to score'),
+		'#options' => $students,
+		'#default_value' => $edit['uid'],
+		'#required' => TRUE
+	);
+  // academicsession
+	$form['academicsession'] = array(
+		'#type' => 'select',
+		'#title' => t('Academic session'),
+		'#description' => t('Select the academic session this score is for.'),
+		'#options' => AcademicSession::listAcademicSession(),
+		'#default_value' => $edit['academicsession'],
+		'#required' => TRUE
+	);
+	$form['exam_score'] = array(
+		'#type' => 'textfield',
+		'#title' => t('Exam score'),
+		'#description' => t('The actual score value'),
+		'#default_value' => $edit['exam_score'],
+	);
+	// overall
+	$form['overall'] = array(
+		'#type' => 'select',
+		'#title' => t('Overall'),
+		'#description' => t('Score total or overall'),
+		'#default_value' => $edit['overall'],
+		'#options' => drupal_map_assoc(range(1, 1000)),
+		'#required' => TRUE
+	);
+	// islocked
+	$form['islocked'] = array(
+		'#type' => 'checkbox',
+		'#title' => t('Locked'),
+		'#description' => t('Whether this score is locked from editing'),
+		'#default_value' => $edit['islocked'],
+	);
+	$form['submit'] = array(
+		'#type' => 'submit',
+		'#value' => isset($score) ? 'Update' : 'Save',
+		'#attributes' => array('class' => 'btn'),
+	);
+	$form['_score'] = array('#type' => 'value', '#value' => $edit);
+	$form['created'] = array('#type' => 'value', '#value' => time());
+	if(isset($score)) {
+		$form['state'] = array('#type' => 'value', '#value' => 'update');
+		$form['updated'] = array('#type' => 'value', '#value' => time());
+		$form['_loaded'] = array('#type' => 'value', '#value' => $score);
+	}
+  return $form;
+}
+
+function proschool_score_form_validate($form, &$form_state) {
+
+}
+
+function proschool_score_form_submit($form, &$form_state) {
+	//dsm($form_state['values']);
+	if (!empty($form_state['ahah_submission'])) {
+	//dsm($form_state['values']);
+	return;
+	}
+	// set testcount = 0
+	$score = $form_state['values']['_score'];
+	$score_table = 'score';
+	$loaded = $form_state['values']['_loaded'];
+	$op = $form_state['values']['op'];
+
+	$success = FALSE;
+    if($op == 'Update') {
+		// it's an edit
+		db_query("UPDATE {score} SET uid = %d, course = %d, islocked = %d,  academicsession = '%s', overall = %d, score = %d, updated = %d WHERE id = %d", $form_state['values']['course_holder']['uid'],  $form_state['values']['programme_holder']['class'], $form_state['values']['islocked'], $form_state['values']['academicsession'], $form_state['values']['overall'], $form_state['values']['exam_score'], $form_state['values']['updated'], $loaded['id']);
+
+    $success = TRUE;
+    if($success) {
+		// TODO: grade update score
+		$updated_score = array(
+		'course' => $form_state['values']['programme_holder']['class'],
+		'uid' => $form_state['values']['course_holder']['uid'],
+		'islocked' => $form_state['values']['islocked'],
+		'academicsession' => $form_state['values']['academicsession'],
+		'overall' => $form_state['values']['overall'],
+		'exam_score' => $form_state['values']['exam_score'],
+		'submittedby' => ''
+		);
+		// module_invoke('acm_school', 'grade_update_score', $form_state['values']);
+		drupal_set_message('Update completed successfully');
+		return;
+    }
+	drupal_set_message('An error occurred while updating Score');
+	return FALSE;
+  }
+
+	if($op == 'Save') {
+		//drupal_write_record($score_table, $form_state['values']);
+		db_query("INSERT INTO {score} (uid, course, islocked, academicsession, overall, score, created) VALUES (%d, %d, %d, %s', %d, %d)", $form_state['values']['course_holder']['uid'],  $form_state['values']['programme_holder']['class'], $form_state['values']['islocked'], 
+		$form_state['values']['academicsession'], $form_state['values']['overall'], $form_state['values']['exam_score'], $form_state['values']['created']);  
+
+    $success = TRUE;
+    if($success) {
+      // TODO Invoke hook to grade new Score
+      $new_score = array(
+        'course' => $form_state['values']['programme_holder']['class'],
+        'uid' => $form_state['values']['course_holder']['uid'],
+        'islocked' => $form_state['values']['islocked'],
+        'academicsession' => $form_state['values']['academicsession'],
+        'overall' => $form_state['values']['overall'],
+        'exam_score' => $form_state['values']['exam_score'],
+        'submittedby' => 0
+      );
+      // grade_new_score
+      drupal_set_message('Score created successfully');
+    }
+  }
+}
+
+/**
+ * Implementation of hook_views_api(), register view API information so include files can be loaded
+ */
+function proschool_views_api() {
+  return array(
+    'api' => 2,
+    'path' => drupal_get_path('module', 'proschool') . '/views',
+  );
+}
+
