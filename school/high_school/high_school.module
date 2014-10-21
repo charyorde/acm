@@ -170,12 +170,12 @@ function high_school_term_type() {
 	return variable_set('term_type', 'Annual');
 }
 /**
- * Implements hook_faculty_settings 
+ * Implements hook_teacher_settings 
  */
 /**
- * Implements hook_faculty_settings 
+ * Implements hook_teacher_settings 
  */
-function high_school_faculty_settings($type) {
+function high_school_teacher_settings($type) {
 	$settings['type'] = 'teacher';
 	$settings['teacher']['add'] = array(
 		'title' => t('Add'),
@@ -320,25 +320,6 @@ function high_school_teacher_subj_form_validate($form, &$form_state) {
 }
 function high_school_teacher_subj_form_submit($form, &$form_state) {
     // submit code
-}
-
-/**
- * Implements hook_department_settings 
- */
-function high_school_department_settings($type) {
-	//not required
-}
-function high_school_programme_settings($type) {
-	//not required
-}
-function high_school_programme_form(&$form_state, $programme = NULL, $edit = NULL) {
-	//not required
-}
-function high_school_programme_form_validate($form, &$form_state) {
-    //not required
-}
-function high_school_programme_form_submit($form, &$form_state) {
-    //not required
 }
 function high_school_student_application_table_info() {
 	$table['course_info'] = array(
