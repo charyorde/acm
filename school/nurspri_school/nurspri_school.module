@@ -177,7 +177,7 @@ function nurspri_school_term_type() {
 /**
  * Implements hook_faculty_settings 
  */
-function nurspri_school_faculty_settings($type) {
+function nurspri_school_teacher_settings($type) {
 	$settings['type'] = 'teacher';
 	$settings['teacher']['add'] = array(
 		'title' => t('Add'),
@@ -324,24 +324,6 @@ function nurspri_school_teacher_subj_form_submit($form, &$form_state) {
     // submit code
 }
 
-/**
- * Implements hook_department_settings 
- */
-function nurspri_school_department_settings($type) {
-	//not required
-}
-function nurspri_school_programme_settings($type) {
-	//not required
-}
-function nurspri_school_programme_form(&$form_state, $programme = NULL, $edit = NULL) {
-	//not required
-}
-function nurspri_school_programme_form_validate($form, &$form_state) {
-    //not required
-}
-function nurspri_school_programme_form_submit($form, &$form_state) {
-    //not required
-}
 function nurspri_school_student_application_table_info() {
   $table['course_info'] = array(
     'primary key' => 'id'
@@ -630,19 +612,6 @@ function nurspri_school_grade_settings_form() {
  */
 function nurspri_school_fees_type() {
 	return array('General');
-}
-/**
- * implements hook_faculty 
- */
-function nurspri_school_faculty() {
-	//not needed
-}
-
-/**
- * implements hook_department 
- */
-function nurspri_school_department() {
-	//not needed
 }
 
 /**
