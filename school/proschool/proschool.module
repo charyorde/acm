@@ -180,7 +180,7 @@ function proschool_term_type() {
 /**
  * Implements hook_faculty_settings 
  */
-function proschool_faculty_settings($type) {
+function proschool_teacher_settings($type) {
 	$settings['type'] = 'teacher';
 	$settings['teacher']['add'] = array(
 		'title' => t('Add'),
@@ -327,24 +327,6 @@ function proschool_teacher_subj_form_submit($form, &$form_state) {
     // submit code
 }
 
-/**
- * Implements hook_department_settings 
- */
-function proschool_department_settings($type) {
-  //not required
-}
-function proschool_programme_settings($type) {
-   //not required
-}
-function proschool_programme_form(&$form_state, $programme = NULL, $edit = NULL) {
-   //not required
-}
-function proschool_programme_form_validate($form, &$form_state) {
-     //not required
-}
-function proschool_programme_form_submit($form, &$form_state) {
-    //not required
-}
 function proschool_student_application_table_info() {
   $table['course_info'] = array(
     'primary key' => 'id'
@@ -673,24 +655,7 @@ function proschool_grade_settings_form() {
 function proschool_fees_type() {
 	return array('General');
 }
-/**
- * implements hook_faculty 
- */
-function proschool_faculty() {
-	//not needed
-}
-/**
- * implements hook_department 
- */
-function proschool_department() {
-	//not needed
-}
-/**
- * Implements hook_grade 
- */
-function proschool_grade() {
-	//not needed
-}
+
 /**
  * Implements hook_fees 
  */
